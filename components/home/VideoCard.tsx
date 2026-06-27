@@ -13,11 +13,9 @@ import { Check, Clock, Play, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatDuration, getProgressPercentage } from "@/lib/utils";
 import MatchBadge from "@/components/shared/MatchBadge";
+import ThumbnailFallback from "@/components/shared/ThumbnailFallback";
 import { useAppStore } from "@/store/useStore";
 import type { VideoType } from "@/types";
-
-const FALLBACK_THUMBNAIL =
-  "https://res.cloudinary.com/demo/image/upload/c_fill,h_360,w_640/sample.jpg";
 
 interface VideoCardProps {
   video: VideoType;
@@ -77,14 +75,22 @@ export default function VideoCard({
           className="absolute inset-0"
           aria-label={`Watch ${video.title}`}
         >
-          <Image
-            src={imageError ? FALLBACK_THUMBNAIL : video.thumbnailUrl}
-            alt={video.title}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-            sizes="(max-width: 640px) 46vw, (max-width: 768px) 200px, (max-width: 1024px) 240px, 280px"
-            onError={() => setImageError(true)}
-          />
+          {imageError ? (
+            <ThumbnailFallback
+              title={video.title}
+              seed={video.id}
+              className="transition-transform duration-500 group-hover:scale-110"
+            />
+          ) : (
+            <Image
+              src={video.thumbnailUrl}
+              alt={video.title}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              sizes="(max-width: 640px) 46vw, (max-width: 768px) 200px, (max-width: 1024px) 240px, 280px"
+              onError={() => setImageError(true)}
+            />
+          )}
         </Link>
 
         {video.trailerUrl && (

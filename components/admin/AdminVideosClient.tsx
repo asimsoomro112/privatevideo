@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { CATEGORIES } from "@/lib/categories";
 import { cn, formatDuration, getErrorMessage } from "@/lib/utils";
+import ThumbnailFallback from "@/components/shared/ThumbnailFallback";
 
 export type AdminVideo = {
   id: string;
@@ -87,6 +88,28 @@ async function readApiError(response: Response): Promise<string> {
   } catch {
     return response.statusText;
   }
+}
+
+function AdminThumbnail({ video }: { video: AdminVideo }) {
+  const [imageError, setImageError] = useState(false);
+
+  return imageError ? (
+    <ThumbnailFallback
+      title={video.title}
+      seed={video.id}
+      compact
+      className="h-full w-full"
+    />
+  ) : (
+    <Image
+      src={video.thumbnailUrl}
+      alt={`${video.title} thumbnail`}
+      width={64}
+      height={36}
+      className="h-full w-full object-cover"
+      onError={() => setImageError(true)}
+    />
+  );
 }
 
 export default function AdminVideosClient({
@@ -281,15 +304,7 @@ export default function AdminVideosClient({
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-16 h-9 rounded bg-bg-tertiary overflow-hidden flex-shrink-0">
-                          {video.thumbnailUrl && (
-                            <Image
-                              src={video.thumbnailUrl}
-                              alt={`${video.title} thumbnail`}
-                              width={64}
-                              height={36}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
+                          <AdminThumbnail video={video} />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-text-primary truncate max-w-[220px]">

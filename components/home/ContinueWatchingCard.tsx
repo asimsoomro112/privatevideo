@@ -6,10 +6,12 @@
 
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Play } from "lucide-react";
 import { formatDuration, getProgressPercentage } from "@/lib/utils";
+import ThumbnailFallback from "@/components/shared/ThumbnailFallback";
 import type { VideoType } from "@/types";
 
 interface ContinueWatchingCardProps {
@@ -23,6 +25,7 @@ export default function ContinueWatchingCard({
   progress,
   index = 0,
 }: ContinueWatchingCardProps) {
+  const [imageError, setImageError] = useState(false);
   const percent = getProgressPercentage(progress, video.duration);
   const remaining = video.duration - progress;
 
@@ -34,13 +37,18 @@ export default function ContinueWatchingCard({
       <Link href={`/watch/${video.id}?t=${Math.floor(progress)}`} className="block">
         <div className="relative aspect-video rounded-lg overflow-hidden bg-bg-secondary">
           {/* Thumbnail */}
-          <Image
-            src={video.thumbnailUrl}
-            alt={video.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 200px, (max-width: 768px) 240px, 300px"
-          />
+          {imageError ? (
+            <ThumbnailFallback title={video.title} seed={video.id} />
+          ) : (
+            <Image
+              src={video.thumbnailUrl}
+              alt={video.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 200px, (max-width: 768px) 240px, 300px"
+              onError={() => setImageError(true)}
+            />
+          )}
 
           {/* Hover overlay with resume play */}
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">

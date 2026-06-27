@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Play, Info, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MatchBadge from "@/components/shared/MatchBadge";
+import ThumbnailFallback from "@/components/shared/ThumbnailFallback";
 import type { VideoType } from "@/types";
 
 interface HeroBannerProps {
@@ -23,6 +24,7 @@ export default function HeroBanner({ video }: HeroBannerProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // GSAP animation on mount
   useEffect(() => {
@@ -63,17 +65,29 @@ export default function HeroBanner({ video }: HeroBannerProps) {
       {/* Background Video / Poster Fallback */}
       <div className="absolute inset-0">
         {/* Poster image (always shown as fallback) */}
-        <Image
-          src={video.posterUrl || video.thumbnailUrl}
-          alt={video.title}
-          fill
-          priority
-          className={cn(
-            "object-cover transition-opacity duration-1000",
-            isVideoLoaded ? "opacity-0" : "opacity-100"
-          )}
-          sizes="100vw"
-        />
+        {imageError ? (
+          <ThumbnailFallback
+            title={video.title}
+            seed={video.id}
+            className={cn(
+              "transition-opacity duration-1000",
+              isVideoLoaded ? "opacity-0" : "opacity-100"
+            )}
+          />
+        ) : (
+          <Image
+            src={video.posterUrl || video.thumbnailUrl}
+            alt={video.title}
+            fill
+            priority
+            className={cn(
+              "object-cover transition-opacity duration-1000",
+              isVideoLoaded ? "opacity-0" : "opacity-100"
+            )}
+            sizes="100vw"
+            onError={() => setImageError(true)}
+          />
+        )}
 
         {/* Auto-playing trailer video */}
         {(video.trailerUrl || video.hlsUrl) && (
