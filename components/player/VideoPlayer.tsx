@@ -313,7 +313,7 @@ export default function VideoPlayer({
     };
   }, [saveProgress]);
 
-  // Controls visibility — works for both mouse-move (desktop) and explicit taps (mobile)
+  // Controls visibility: works for both mouse-move (desktop) and explicit taps (mobile)
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
     if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
@@ -372,6 +372,14 @@ export default function VideoPlayer({
     const nextMuted = !video.muted;
     video.muted = nextMuted;
     setIsMuted(nextMuted);
+  }, []);
+
+  const syncVolumeState = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    setVolume(video.volume);
+    setIsMuted(video.muted || video.volume === 0);
   }, []);
 
   // Fullscreen
@@ -670,7 +678,7 @@ export default function VideoPlayer({
     };
   }, []);
 
-  // Keyboard shortcuts (desktop only — no-op on touch-only devices, harmless either way)
+  // Keyboard shortcuts (desktop only; no-op on touch-only devices, harmless either way)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -703,14 +711,18 @@ export default function VideoPlayer({
           break;
         case "ArrowUp":
           if (videoRef.current) {
-            videoRef.current.volume = Math.min(1, videoRef.current.volume + 0.1);
-            setVolume(videoRef.current.volume);
+            const nextVolume = Math.min(1, videoRef.current.volume + 0.1);
+            videoRef.current.volume = nextVolume;
+            videoRef.current.muted = false;
+            syncVolumeState();
           }
           break;
         case "ArrowDown":
           if (videoRef.current) {
-            videoRef.current.volume = Math.max(0, videoRef.current.volume - 0.1);
-            setVolume(videoRef.current.volume);
+            const nextVolume = Math.max(0, videoRef.current.volume - 0.1);
+            videoRef.current.volume = nextVolume;
+            videoRef.current.muted = nextVolume === 0;
+            syncVolumeState();
           }
           break;
         case "Escape":
@@ -721,7 +733,14 @@ export default function VideoPlayer({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [togglePlay, toggleMute, toggleFullscreen, isFullscreen, jumpBy]);
+  }, [
+    togglePlay,
+    toggleMute,
+    toggleFullscreen,
+    isFullscreen,
+    jumpBy,
+    syncVolumeState,
+  ]);
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -759,6 +778,7 @@ export default function VideoPlayer({
           setIsLoading(false);
           setHasError(false);
         }}
+        onVolumeChange={syncVolumeState}
         onError={() => setHasError(true)}
         onPause={() => {
           const video = videoRef.current;
@@ -920,7 +940,7 @@ export default function VideoPlayer({
                 className="absolute inset-y-0 left-0 rounded-full bg-accent"
                 style={{ width: `${progressPercent}%` }}
               />
-              {/* Scrubber handle — always visible on touch since there's no hover state */}
+              {/* Scrubber handle: always visible on touch since there is no hover state */}
               <div
                 className={cn(
                   "absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-accent shadow-lg shadow-accent/40 transition-opacity",
@@ -976,7 +996,7 @@ export default function VideoPlayer({
                 <SkipForward size={20} />
               </button>
 
-              {/* Volume — hover slider on desktop (pointer: fine), tap-only mute on touch */}
+              {/* Volume: hover slider on desktop, tap-only mute on touch */}
               <div className="flex items-center gap-2 group/volume">
                 <button
                   type="button"
@@ -1056,7 +1076,7 @@ export default function VideoPlayer({
                 Theater
               </button>
 
-              {/* PiP — desktop/tablet only, hidden on small touch screens where it's rarely usable */}
+              {/* PiP: desktop/tablet only, hidden on small touch screens where it is rarely usable */}
               <button
                 type="button"
                 onClick={(event) => {
