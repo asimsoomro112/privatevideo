@@ -1,17 +1,17 @@
 # HerPrivateCinema
 
-A private, premium, mobile-first video streaming app built with Next.js 15, TypeScript, Tailwind CSS, NextAuth credentials, Prisma + SQLite, Zustand, framer-motion, hls.js, and Cloudinary.
+A private, premium, mobile-first video streaming app built with Next.js 15, TypeScript, Tailwind CSS, Auth.js/NextAuth credentials, Prisma + PostgreSQL/Supabase, Zustand, framer-motion, hls.js, and Bunny Stream.
 
 ## Features
 
 - Single-password private login. No public content routes.
 - Hidden admin entry at `/vault-admin`; normal UI does not show admin links.
-- Cloudinary video uploads with eager HLS generation.
+- Bunny Stream video uploads with HLS playback, thumbnails, and MP4 fallback.
 - Custom hls.js player with resume progress, PiP, fullscreen, theater mode, speed control, and private pause/end messages.
 - Long-form homepage with Continue Watching, Trending, Mood-Based Picks, New Additions, category rows, search, and My List.
 - TikTok-style Shorts page for videos under 2 minutes.
 - Mobile-first bottom navigation and touch-friendly cards/feed controls.
-- Real admin upload with Cloudinary processing, metadata controls, edit/delete, publish/draft, featured toggles, and bulk upload CLI.
+- Real admin upload with Bunny Stream processing, metadata controls, edit/delete, publish/draft, featured toggles, and bulk upload CLI.
 - Romantic message button with 50+ configurable English/Roman Urdu lines.
 - shadcn-style local UI primitives in `components/ui`.
 
@@ -27,17 +27,14 @@ Required:
 
 ```env
 DATABASE_URL="file:./dev.db"
-NEXTAUTH_SECRET="replace-with-a-long-random-secret"
-AUTH_SECRET="replace-with-the-same-long-random-secret"
+AUTH_SECRET="replace-with-a-long-random-secret"
 NEXTAUTH_URL="http://localhost:3000"
+AUTH_TRUST_HOST="true"
 PRIVATE_ACCESS_PASSWORD="change-this-password"
-CLOUDINARY_CLOUD_NAME="your-cloud-name"
-CLOUDINARY_API_KEY="your-api-key"
-CLOUDINARY_API_SECRET="your-api-secret"
-CLOUDINARY_STREAMING_PROFILE="full_hd"
-CLOUDINARY_UPLOAD_FOLDER="herprivatecinema/videos"
+BUNNY_STREAM_LIBRARY_ID="your-bunny-stream-library-id"
+BUNNY_STREAM_ACCESS_KEY="your-bunny-stream-api-key"
+BUNNY_STREAM_HOSTNAME="your-bunny-cdn-hostname.b-cdn.net"
 NEXT_PUBLIC_SITE_NAME="HerPrivateCinema"
-NEXT_PUBLIC_ACCENT_COLOR="#F43F7D"
 ```
 
 ## Local Setup
@@ -65,33 +62,19 @@ Open `http://localhost:3000`.
 
 The admin API is blocked until `/vault-admin` has been opened after login.
 
-## Cloudinary HLS Setup
+## Bunny Stream Setup
 
-This app uploads videos to Cloudinary using:
+This app uploads videos to Bunny Stream using:
 
-- `resource_type: "video"`
-- `folder: CLOUDINARY_UPLOAD_FOLDER`
-- eager HLS transformation:
+- `BUNNY_STREAM_LIBRARY_ID`
+- `BUNNY_STREAM_ACCESS_KEY`
+- `BUNNY_STREAM_HOSTNAME`
 
-```ts
-{
-  streaming_profile: process.env.CLOUDINARY_STREAMING_PROFILE || "full_hd",
-  format: "m3u8"
-}
-```
-
-Cloudinary URLs generated:
+Bunny URLs generated:
 
 - HLS playback `.m3u8`
-- 640x360 thumbnail
-- 1280x720 poster
-- 6-second MP4 hover preview
-
-Optional:
-
-```env
-CLOUDINARY_NOTIFICATION_URL="https://your-domain.com/api/webhooks/cloudinary"
-```
+- `thumbnail.jpg` poster/thumbnail
+- `play_360p.mp4` fallback for browsers that cannot use HLS
 
 ## Bulk Upload
 
@@ -150,18 +133,14 @@ npx prisma db push
    | :--- | :--- |
    | `DATABASE_URL` | Supabase Transaction Pooler / pooler connection string, usually port `6543`. |
    | `DIRECT_URL` | Supabase direct connection string, usually port `5432`, used by Prisma schema operations. |
-   | `NEXTAUTH_SECRET` | A secure, random 32-character secret (generate with `openssl rand -base64 32`). |
-   | `AUTH_SECRET` | Match `NEXTAUTH_SECRET` (crucial for Auth.js/NextAuth v5 beta). |
+   | `AUTH_SECRET` | A secure, random 32-character secret (generate with `openssl rand -base64 32`). |
    | `AUTH_TRUST_HOST` | Set to `true` (resolves authentication callbacks across dynamic domain redirects). |
-   | `NEXTAUTH_URL` | Canonical URL of your deployment (e.g., `https://your-app.vercel.app`). |
+   | `NEXTAUTH_URL` | Canonical URL of your deployment, e.g. `https://privatevideo-two.vercel.app`. Do not leave this as `http://localhost:3000` in Vercel. |
    | `PRIVATE_ACCESS_PASSWORD` | The secret password users input to access your private cinema. |
-   | `ADMIN_PASSWORD` | The admin password for modifying video items. |
-   | `MEDIA_PROVIDER` | `bunny` (or `cloudinary`). |
    | `BUNNY_STREAM_LIBRARY_ID` | Your Bunny Stream Library ID. |
    | `BUNNY_STREAM_ACCESS_KEY` | Your Bunny Stream API key. |
    | `BUNNY_STREAM_HOSTNAME` | Your Bunny CDN hostname. |
    | `NEXT_PUBLIC_SITE_NAME` | Your custom Site name (e.g., `HerPrivateCinema`). |
-   | `NEXT_PUBLIC_ACCENT_COLOR` | Theme accent hex color (e.g., `#F43F7D`). |
 
 4. Click **Deploy**. Vercel will automatically trigger `"postinstall": "prisma generate"` during the install phase and compile the application.
 
