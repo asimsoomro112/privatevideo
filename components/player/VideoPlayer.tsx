@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn, formatPlayerTime } from "@/lib/utils";
-import { getRandomRomanticMessage } from "@/lib/romantic-messages";
 
 interface VideoPlayerProps {
   hlsUrl: string;
@@ -137,7 +136,6 @@ export default function VideoPlayer({
   const [bufferedPercent, setBufferedPercent] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
-  const [momentMessage, setMomentMessage] = useState("");
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isHoldSpeeding, setIsHoldSpeeding] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -161,7 +159,6 @@ export default function VideoPlayer({
     try {
       await video.play();
       setIsPlaying(true);
-      setMomentMessage("");
       return true;
     } catch (error) {
       const name =
@@ -384,7 +381,6 @@ export default function VideoPlayer({
     } else {
       video.pause();
       setIsPlaying(false);
-      setMomentMessage(getRandomRomanticMessage());
     }
   }, [safePlay]);
 
@@ -1003,13 +999,9 @@ export default function VideoPlayer({
           if (video) {
             saveProgress(video.currentTime, { force: true, keepalive: true });
           }
-          if (!videoRef.current?.ended && !isScrubbingRef.current) {
-            setMomentMessage(getRandomRomanticMessage());
-          }
         }}
         onPlay={() => {
           setIsPlaying(true);
-          setMomentMessage("");
         }}
         onEnded={() => {
           setIsPlaying(false);
@@ -1019,7 +1011,6 @@ export default function VideoPlayer({
               keepalive: true,
             });
           }
-          setMomentMessage(getRandomRomanticMessage());
         }}
       />
 
@@ -1107,15 +1098,6 @@ export default function VideoPlayer({
           <div className="mt-2 text-center text-xs font-semibold tabular-nums">
             {Math.round(volume * 100)}
           </div>
-        </div>
-      )}
-
-      {momentMessage && !isLoading && (
-        <div
-          className="pointer-events-none absolute left-1/2 z-20 w-[min(88vw,520px)] -translate-x-1/2 rounded-xl border border-rose-300/20 bg-black/55 px-4 py-3 text-center text-sm text-text-secondary backdrop-blur-md md:text-base"
-          style={{ top: "calc(22% + env(safe-area-inset-top, 0px))" }}
-        >
-          {momentMessage}
         </div>
       )}
 

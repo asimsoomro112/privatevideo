@@ -7,7 +7,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Calendar, Clock, Eye } from "lucide-react";
 import VideoPlayer from "@/components/player/VideoPlayer";
-import RomanticMessageButton from "@/components/player/RomanticMessageButton";
 import MatchBadge from "@/components/shared/MatchBadge";
 import CategoryPill from "@/components/shared/CategoryPill";
 import VideoGrid from "@/components/home/VideoGrid";
@@ -146,8 +145,6 @@ export default async function WatchPage({
           />
         </div>
       )}
-
-      <RomanticMessageButton />
     </div>
   );
 }

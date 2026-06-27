@@ -164,6 +164,5 @@ npx prisma db push
 - Brand name: `NEXT_PUBLIC_SITE_NAME`
 - Theme colors: `app/globals.css`
 - Categories/moods: `lib/categories.ts`
-- Romantic messages: `lib/romantic-messages.ts`
 - Upload behavior: `app/api/upload/route.ts`
 - Bulk upload behavior: `scripts/bulk-upload.ts`
