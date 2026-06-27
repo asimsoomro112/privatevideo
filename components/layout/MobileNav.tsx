@@ -23,9 +23,9 @@ export default function MobileNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 mobile-nav md:hidden">
       {/* Glassmorphism background */}
-      <div className="mx-3 mb-2 rounded-2xl bg-bg-secondary/95 backdrop-blur-2xl border border-glass-border shadow-2xl shadow-black/50">
+      <div className="mx-2 mb-2 rounded-2xl border border-glass-border bg-bg-secondary/95 shadow-lg shadow-black/35 backdrop-blur-md">
         <div className="grid grid-cols-5 items-center py-2 px-1">
           {links.map((link) => {
             const isActive =
@@ -39,7 +39,7 @@ export default function MobileNav() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl transition-all duration-200",
+                  "relative flex min-h-11 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl transition-colors active:scale-95",
                   isActive
                     ? "text-accent"
                     : "text-text-muted hover:text-text-secondary"
@@ -48,7 +48,7 @@ export default function MobileNav() {
                 <Icon
                   size={22}
                   className={cn(
-                    "transition-transform duration-200",
+                    "transition-transform",
                     isActive && "scale-110"
                   )}
                 />

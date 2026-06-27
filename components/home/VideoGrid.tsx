@@ -29,7 +29,7 @@ export default function VideoGrid({ title, videos, description }: VideoGridProps
       <div className="grid grid-cols-2 gap-x-2 gap-y-6 sm:grid-cols-3 md:grid-cols-4 md:gap-x-3 lg:grid-cols-5 xl:grid-cols-6">
         {videos.map((video, index) => (
           <div key={video.id} className="min-w-0">
-            <VideoCard video={video} index={index} />
+            <VideoCard video={video} index={index} variant="grid" />
           </div>
         ))}
       </div>

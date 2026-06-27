@@ -218,6 +218,18 @@ export default function VideoPlayer({
     }
   }, [safePlay]);
 
+  const handleTogglePlayClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      togglePlay();
+    },
+    [togglePlay]
+  );
+
+  useEffect(() => {
+    if (!isPlaying) setShowControls(true);
+  }, [isPlaying]);
+
   const cycleSpeed = useCallback(() => {
     const speeds = [0.75, 1, 1.25, 1.5, 2];
     const nextSpeed = speeds[(speeds.indexOf(playbackRate) + 1) % speeds.length];
@@ -429,6 +441,7 @@ export default function VideoPlayer({
         {/* Top bar: Back + Title */}
         <div className="absolute top-0 left-0 right-0 z-30 p-3 md:p-6 flex items-center gap-3 md:gap-4 bg-gradient-to-b from-black/70 to-transparent">
           <button
+            type="button"
             onClick={() => router.back()}
             className="w-10 h-10 flex-shrink-0 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors"
             aria-label="Go back"
@@ -439,10 +452,12 @@ export default function VideoPlayer({
         </div>
 
         {/* Center play/pause */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <button
-            onClick={togglePlay}
+            type="button"
+            onClick={handleTogglePlayClick}
             className="pointer-events-auto w-14 h-14 md:w-20 md:h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 hover:scale-110 transition-all"
+            aria-label={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? (
               <Pause size={32} fill="white" />
@@ -491,12 +506,13 @@ export default function VideoPlayer({
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2 md:gap-3">
               {/* Play/Pause */}
-              <button onClick={togglePlay} className="hover:scale-110 transition-transform" aria-label={isPlaying ? "Pause" : "Play"}>
+              <button type="button" onClick={handleTogglePlayClick} className="hover:scale-110 transition-transform" aria-label={isPlaying ? "Pause" : "Play"}>
                 {isPlaying ? <Pause size={22} /> : <Play size={22} fill="white" className="ml-0.5" />}
               </button>
 
               {/* Skip Forward */}
               <button
+                type="button"
                 onClick={() => { if (videoRef.current) videoRef.current.currentTime += 10; }}
                 className="hover:scale-110 transition-transform"
                 aria-label="Skip 10s"
@@ -506,7 +522,7 @@ export default function VideoPlayer({
 
               {/* Volume */}
               <div className="hidden sm:flex items-center gap-2 group/volume">
-                <button onClick={toggleMute} className="hover:scale-110 transition-transform" aria-label="Mute">
+                <button type="button" onClick={toggleMute} className="hover:scale-110 transition-transform" aria-label="Mute">
                   {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
                 </button>
                 <input
@@ -536,6 +552,7 @@ export default function VideoPlayer({
 
             <div className="flex flex-shrink-0 items-center gap-3">
               <button
+                type="button"
                 onClick={cycleSpeed}
                 className="rounded border border-white/20 px-2 py-1 text-xs font-semibold hover:border-white/40"
                 aria-label="Playback speed"
@@ -544,11 +561,12 @@ export default function VideoPlayer({
               </button>
 
               {/* Settings placeholder */}
-              <button className="hidden sm:block hover:scale-110 transition-transform opacity-60 hover:opacity-100" aria-label="Settings">
+              <button type="button" className="hidden sm:block hover:scale-110 transition-transform opacity-60 hover:opacity-100" aria-label="Settings">
                 <Settings size={20} />
               </button>
 
               <button
+                type="button"
                 onClick={() => setIsTheaterMode((value) => !value)}
                 className="hidden sm:block rounded border border-white/20 px-2 py-1 text-xs font-semibold hover:border-white/40"
                 aria-label="Theater mode"
@@ -557,12 +575,12 @@ export default function VideoPlayer({
               </button>
 
               {/* PiP */}
-              <button onClick={togglePiP} className="hover:scale-110 transition-transform hidden md:block" aria-label="Picture in Picture">
+              <button type="button" onClick={togglePiP} className="hover:scale-110 transition-transform hidden md:block" aria-label="Picture in Picture">
                 <PictureInPicture2 size={20} />
               </button>
 
               {/* Fullscreen */}
-              <button onClick={toggleFullscreen} className="hover:scale-110 transition-transform" aria-label="Fullscreen">
+              <button type="button" onClick={toggleFullscreen} className="hover:scale-110 transition-transform" aria-label="Fullscreen">
                 {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
               </button>
             </div>

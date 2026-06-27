@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, Clock, Play, Plus } from "lucide-react";
+import { Check, Clock, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatDuration, getProgressPercentage } from "@/lib/utils";
 import MatchBadge from "@/components/shared/MatchBadge";
@@ -22,6 +22,7 @@ interface VideoCardProps {
   progress?: number;
   showProgress?: boolean;
   index?: number;
+  variant?: "row" | "grid";
 }
 
 export default function VideoCard({
@@ -29,6 +30,7 @@ export default function VideoCard({
   progress,
   showProgress = false,
   index = 0,
+  variant = "row",
 }: VideoCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isUpdatingList, setIsUpdatingList] = useState(false);
@@ -63,7 +65,12 @@ export default function VideoCard({
 
   return (
     <div
-      className="video-card flex-shrink-0 w-[46vw] max-w-[190px] sm:w-[200px] sm:max-w-none md:w-[240px] lg:w-[280px] group"
+      className={cn(
+        "video-card group",
+        variant === "grid"
+          ? "w-full"
+          : "flex-shrink-0 w-[46vw] max-w-[190px] sm:w-[200px] sm:max-w-none md:w-[240px] lg:w-[280px]"
+      )}
       style={{ animationDelay: `${index * 0.05}s` }}
       onMouseEnter={() => setIsPreviewing(true)}
       onMouseLeave={() => setIsPreviewing(false)}
@@ -107,41 +114,25 @@ export default function VideoCard({
           />
         )}
 
-        {/* Hover Overlay */}
-        <div
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleToggleMyList();
+          }}
+          disabled={isUpdatingList}
           className={cn(
-            "absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent",
-            "flex items-end justify-between p-3 pointer-events-none",
-            "transition-opacity duration-300",
-            "opacity-100 md:opacity-0 md:group-hover:opacity-100"
+            "absolute right-1.5 top-1.5 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/70",
+            isInMyList && "border-white/70 bg-white text-black",
+            isUpdatingList && "cursor-wait opacity-60"
           )}
+          aria-label={isInMyList ? "Remove from My List" : "Add to My List"}
         >
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <Link
-              href={`/watch/${video.id}`}
-              className="w-9 h-9 rounded-full bg-white flex items-center justify-center hover:scale-110 transition-transform"
-              aria-label={`Play ${video.title}`}
-            >
-              <Play size={16} fill="black" className="text-black ml-0.5" />
-            </Link>
-            <button
-              type="button"
-              onClick={handleToggleMyList}
-              disabled={isUpdatingList}
-              className={cn(
-                "w-9 h-9 rounded-full border-2 flex items-center justify-center transition-colors",
-                isInMyList
-                  ? "border-white bg-white text-black"
-                  : "border-gray-400 hover:border-white text-white",
-                isUpdatingList && "opacity-60 cursor-wait"
-              )}
-              aria-label={isInMyList ? "Remove from My List" : "Add to My List"}
-            >
-              {isInMyList ? <Check size={16} /> : <Plus size={16} />}
-            </button>
-          </div>
+          {isInMyList ? <Check size={13} /> : <Plus size={13} />}
+        </button>
 
-          <span className="text-xs text-text-secondary flex items-center gap-1">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-end bg-gradient-to-t from-black/70 via-black/5 to-transparent p-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+          <span className="flex items-center gap-1 text-[11px] text-text-secondary">
             <Clock size={12} />
             {formatDuration(video.duration)}
           </span>

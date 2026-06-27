@@ -26,6 +26,10 @@ interface ShortsFeedProps {
 export default function ShortsFeed({ videos }: ShortsFeedProps) {
   const [activeVideoId, setActiveVideoId] = useState(videos[0]?.id ?? "");
   const itemRefs = useRef(new Map<string, HTMLElement>());
+  const activeIndex = Math.max(
+    0,
+    videos.findIndex((video) => video.id === activeVideoId)
+  );
 
   const setItemRef = useCallback((id: string, node: HTMLElement | null) => {
     if (node) {
@@ -76,11 +80,12 @@ export default function ShortsFeed({ videos }: ShortsFeedProps) {
           ref={(node) => setItemRef(video.id, node)}
           data-video-id={video.id}
           className="relative mx-auto h-full w-full snap-start snap-always overflow-hidden bg-black md:max-w-[460px] md:border-x md:border-glass-border"
+          style={{ contentVisibility: "auto", containIntrinsicSize: "100svh" }}
         >
           <ShortVideoItem
             video={video}
             active={activeVideoId === video.id}
-            index={index}
+            shouldLoad={Math.abs(index - activeIndex) <= 1}
             onEnded={() => scrollToNext(video.id)}
           />
         </section>
@@ -92,12 +97,12 @@ export default function ShortsFeed({ videos }: ShortsFeedProps) {
 function ShortVideoItem({
   video,
   active,
-  index,
+  shouldLoad,
   onEnded,
 }: {
   video: VideoType;
   active: boolean;
-  index: number;
+  shouldLoad: boolean;
   onEnded: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -123,7 +128,16 @@ function ShortVideoItem({
     let hls: import("hls.js").default | null = null;
     let cancelled = false;
 
-    setIsLoading(true);
+    if (!shouldLoad) {
+      videoElement.pause();
+      videoElement.removeAttribute("src");
+      videoElement.load();
+      setIsPlaying(false);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(videoElement.readyState < 3);
 
     const initialize = async () => {
       if (sourceUrl.includes(".m3u8")) {
@@ -134,7 +148,8 @@ function ShortVideoItem({
           if (Hls.isSupported()) {
             hls = new Hls({
               enableWorker: true,
-              maxBufferLength: 20,
+              maxBufferLength: 10,
+              backBufferLength: 5,
               startLevel: -1,
             });
             hls.loadSource(sourceUrl);
@@ -164,11 +179,11 @@ function ShortVideoItem({
       cancelled = true;
       hls?.destroy();
     };
-  }, [sourceUrl, video.cloudinaryUrl]);
+  }, [shouldLoad, sourceUrl, video.cloudinaryUrl]);
 
   useEffect(() => {
     const videoElement = videoRef.current;
-    if (!videoElement) return;
+    if (!videoElement || !shouldLoad) return;
 
     videoElement.muted = isMuted;
 
@@ -188,7 +203,7 @@ function ShortVideoItem({
     };
 
     play();
-  }, [active, isMuted]);
+  }, [active, isMuted, shouldLoad]);
 
   const togglePlay = useCallback(async () => {
     const videoElement = videoRef.current;
@@ -318,7 +333,7 @@ function ShortVideoItem({
         poster={video.posterUrl || video.thumbnailUrl}
         muted={isMuted}
         playsInline
-        preload={index <= 1 ? "auto" : "metadata"}
+        preload={active ? "auto" : shouldLoad ? "metadata" : "none"}
         className="h-full w-full bg-black object-contain"
         onLoadedMetadata={() => {
           const videoElement = videoRef.current;
@@ -334,7 +349,7 @@ function ShortVideoItem({
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
-      {isLoading && (
+      {active && isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
           <Loader2 size={30} className="animate-spin text-white/80" />
         </div>
