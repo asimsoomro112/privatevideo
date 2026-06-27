@@ -1,0 +1,43 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js build output
+/.next/
+/out/
+
+# Production build output
+/build
+
+# Debug and Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+bulk-upload-report.json
+bulk-upload-bunny.err.log
+bulk-upload-bunny.log
+bulk-upload.err.log
+bulk-upload.log
+
+# Local environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel build directory
+.vercel
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# SQLite Database and local database files
+/prisma/dev.db
+/prisma/dev.db-journal

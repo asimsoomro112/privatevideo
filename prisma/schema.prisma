@@ -1,0 +1,113 @@
+// ===========================================
+// StreamVault - Prisma Schema
+// ===========================================
+// Supports both SQLite (local dev, provider="sqlite") and PostgreSQL (production, provider="postgresql").
+// Switch providers with: npm run db:sqlite / npm run db:postgres
+// For production (PostgreSQL), DATABASE_URL should point to the Supabase pooler (port 6543)
+// and DIRECT_URL should point to the direct connection (port 5432) for schema migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -------------------------------------------
+// User Authentication & Profiles
+// -------------------------------------------
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  hashedPassword String
+  name           String
+  role           String    @default("USER") // "USER" or "ADMIN"
+  avatar         String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  watchHistory   WatchHistory[]
+  myList         MyList[]
+
+  @@map("users")
+}
+
+// -------------------------------------------
+// Video Content
+// -------------------------------------------
+model Video {
+  id              String    @id @default(uuid())
+  title           String
+  description     String    @default("")
+  slug            String    @unique
+
+  // Cloudinary fields
+  cloudinaryId    String    @unique
+  cloudinaryUrl   String
+  hlsUrl          String
+  thumbnailUrl    String
+  posterUrl       String
+  trailerUrl      String?
+
+  // Metadata
+  duration        Float     @default(0)
+  categoriesRaw   String    @default("") // Stored as comma-separated string
+  tagsRaw         String    @default("") // Stored as comma-separated string
+  matchScore      Int       @default(0)
+  views           Int       @default(0)
+  featured        Boolean   @default(false)
+  published       Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  watchHistory    WatchHistory[]
+  myListEntries   MyList[]
+
+  @@map("videos")
+}
+
+// -------------------------------------------
+// Watch History (tracks progress per user per video)
+// -------------------------------------------
+model WatchHistory {
+  id          String   @id @default(uuid())
+  userId      String
+  videoId     String
+  progress    Float    @default(0)
+  duration    Float    @default(0)
+  completed   Boolean  @default(false)
+  lastWatched DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // Unique constraint
+  @@unique([userId, videoId])
+  @@map("watch_history")
+}
+
+// -------------------------------------------
+// My List (user's saved/bookmarked videos)
+// -------------------------------------------
+model MyList {
+  id      String   @id @default(uuid())
+  userId  String
+  videoId String
+  addedAt DateTime @default(now())
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video   Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // One entry per user-video pair
+  @@unique([userId, videoId])
+  @@map("my_list")
+}
