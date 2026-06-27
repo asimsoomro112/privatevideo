@@ -5,16 +5,9 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-const vercelUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "";
-
 for (const key of ["AUTH_URL", "NEXTAUTH_URL"] as const) {
-  if (
-    vercelUrl &&
-    (!process.env[key] || process.env[key]?.includes("localhost"))
-  ) {
-    process.env[key] = vercelUrl;
+  if (process.env[key]?.includes("localhost")) {
+    delete process.env[key];
   }
 }
 
