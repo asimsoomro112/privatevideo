@@ -266,18 +266,55 @@ export default function VideoPlayer({
     }
   }, []);
 
-  // Seek on progress bar click
-  const handleSeek = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+  const seekToClientX = useCallback(
+    (clientX: number) => {
       const video = videoRef.current;
       const bar = progressRef.current;
-      if (!video || !bar) return;
+      const mediaDuration = duration || video?.duration || 0;
+
+      if (!video || !bar || mediaDuration <= 0) return;
 
       const rect = bar.getBoundingClientRect();
-      const percent = (e.clientX - rect.left) / rect.width;
-      video.currentTime = percent * duration;
+      const percent = Math.max(
+        0,
+        Math.min(1, (clientX - rect.left) / rect.width)
+      );
+      const nextTime = percent * mediaDuration;
+
+      video.currentTime = nextTime;
+      setCurrentTime(nextTime);
+      saveProgress(nextTime);
     },
-    [duration]
+    [duration, saveProgress]
+  );
+
+  const handleSeekPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      seekToClientX(event.clientX);
+    },
+    [seekToClientX]
+  );
+
+  const handleSeekPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.buttons !== 1) return;
+      event.stopPropagation();
+      seekToClientX(event.clientX);
+    },
+    [seekToClientX]
+  );
+
+  const handleSeekPointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    []
   );
 
   // Keyboard shortcuts
@@ -383,12 +420,14 @@ export default function VideoPlayer({
       <div
         className={cn(
           "absolute inset-0 transition-opacity duration-300",
-          showControls ? "opacity-100" : "opacity-0"
+          showControls
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar: Back + Title */}
-        <div className="absolute top-0 left-0 right-0 p-3 md:p-6 flex items-center gap-3 md:gap-4 bg-gradient-to-b from-black/70 to-transparent">
+        <div className="absolute top-0 left-0 right-0 z-30 p-3 md:p-6 flex items-center gap-3 md:gap-4 bg-gradient-to-b from-black/70 to-transparent">
           <button
             onClick={() => router.back()}
             className="w-10 h-10 flex-shrink-0 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors"
@@ -400,10 +439,10 @@ export default function VideoPlayer({
         </div>
 
         {/* Center play/pause */}
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <button
             onClick={togglePlay}
-            className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 hover:scale-110 transition-all"
+            className="pointer-events-auto w-14 h-14 md:w-20 md:h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 hover:scale-110 transition-all"
           >
             {isPlaying ? (
               <Pause size={32} fill="white" />
@@ -414,28 +453,38 @@ export default function VideoPlayer({
         </div>
 
         {/* Bottom Controls */}
-        <div className="player-controls absolute bottom-0 left-0 right-0 px-3 md:px-6 pb-3 md:pb-4 pt-12 md:pt-16">
+        <div className="player-controls absolute bottom-0 left-0 right-0 z-30 px-3 md:px-6 pb-3 md:pb-4 pt-12 md:pt-16">
           {/* Progress Bar */}
           <div
             ref={progressRef}
-            className="relative h-1 bg-white/20 rounded-full mb-4 cursor-pointer group/progress hover:h-2 transition-all"
-            onClick={handleSeek}
+            className="group/progress relative mb-3 flex h-8 cursor-pointer touch-none items-center"
+            onPointerDown={handleSeekPointerDown}
+            onPointerMove={handleSeekPointerMove}
+            onPointerUp={handleSeekPointerEnd}
+            onPointerCancel={handleSeekPointerEnd}
+            onClick={(event) => event.stopPropagation()}
+            aria-label="Seek video"
           >
-            {/* Buffered */}
-            <div
-              className="absolute inset-y-0 left-0 bg-white/30 rounded-full"
-              style={{ width: `${bufferedPercent}%` }}
-            />
-            {/* Progress */}
-            <div
-              className="absolute inset-y-0 left-0 bg-accent rounded-full"
-              style={{ width: `${progressPercent}%` }}
-            />
-            {/* Scrubber handle */}
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-accent rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity shadow-lg"
-              style={{ left: `${progressPercent}%`, transform: `translate(-50%, -50%)` }}
-            />
+            <div className="relative h-1.5 w-full rounded-full bg-white/20 transition-all group-hover/progress:h-2.5">
+              {/* Buffered */}
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-white/30"
+                style={{ width: `${bufferedPercent}%` }}
+              />
+              {/* Progress */}
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-accent"
+                style={{ width: `${progressPercent}%` }}
+              />
+              {/* Scrubber handle */}
+              <div
+                className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-accent opacity-100 shadow-lg shadow-accent/40 transition-opacity md:opacity-0 md:group-hover/progress:opacity-100"
+                style={{
+                  left: `${progressPercent}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
+              />
+            </div>
           </div>
 
           {/* Controls Row */}

@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import MatchBadge from "@/components/shared/MatchBadge";
 import { useAppStore } from "@/store/useStore";
-import { formatDuration, getErrorMessage } from "@/lib/utils";
+import { formatDuration, formatPlayerTime, getErrorMessage } from "@/lib/utils";
 import type { VideoType } from "@/types";
 
 interface ShortsFeedProps {
@@ -101,6 +101,7 @@ function ShortVideoItem({
   onEnded: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const seekBarRef = useRef<HTMLDivElement>(null);
   const lastSaveRef = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -254,12 +255,62 @@ function ShortVideoItem({
     }
   };
 
+  const seekToClientX = useCallback(
+    (clientX: number) => {
+      const videoElement = videoRef.current;
+      const seekBar = seekBarRef.current;
+      const mediaDuration = duration || videoElement?.duration || 0;
+
+      if (!videoElement || !seekBar || mediaDuration <= 0) return;
+
+      const rect = seekBar.getBoundingClientRect();
+      const percent = Math.max(
+        0,
+        Math.min(1, (clientX - rect.left) / rect.width)
+      );
+      const nextTime = percent * mediaDuration;
+
+      videoElement.currentTime = nextTime;
+      setCurrentTime(nextTime);
+    },
+    [duration]
+  );
+
+  const handleSeekPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      seekToClientX(event.clientX);
+    },
+    [seekToClientX]
+  );
+
+  const handleSeekPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.buttons !== 1) return;
+      event.stopPropagation();
+      seekToClientX(event.clientX);
+    },
+    [seekToClientX]
+  );
+
+  const handleSeekPointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    []
+  );
+
   const progressPercent =
     duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   return (
     <div
-      className="group relative h-full w-full cursor-pointer overflow-hidden bg-black"
+      className="group relative h-full w-full cursor-pointer touch-manipulation overflow-hidden bg-black"
       onClick={togglePlay}
     >
       <video
@@ -268,7 +319,7 @@ function ShortVideoItem({
         muted={isMuted}
         playsInline
         preload={index <= 1 ? "auto" : "metadata"}
-        className="h-full w-full object-cover"
+        className="h-full w-full bg-black object-contain"
         onLoadedMetadata={() => {
           const videoElement = videoRef.current;
           if (videoElement?.duration) setDuration(videoElement.duration);
@@ -281,7 +332,7 @@ function ShortVideoItem({
         onTimeUpdate={handleTimeUpdate}
       />
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/10 to-black/25" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -297,12 +348,15 @@ function ShortVideoItem({
         </div>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 px-4 pr-20 pb-5 text-white md:px-5 md:pr-24 md:pb-6">
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-white/75">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pr-16 pb-11 text-white md:px-5 md:pr-20 md:pb-12">
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-white/70">
           <MatchBadge score={video.matchScore || 85} size="sm" />
           <span className="flex items-center gap-1">
             <Clock size={12} />
             {formatDuration(video.duration)}
+          </span>
+          <span className="tabular-nums">
+            {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
           </span>
         </div>
         <h1 className="line-clamp-2 text-lg font-bold leading-tight md:text-xl">
@@ -315,14 +369,14 @@ function ShortVideoItem({
         )}
       </div>
 
-      <div className="absolute bottom-5 right-3 z-20 flex flex-col items-center gap-3 md:right-4 md:bottom-6">
+      <div className="absolute right-3 top-3 z-20 flex flex-col items-center gap-2 md:right-4 md:top-4">
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             toggleMute();
           }}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition hover:bg-black/65"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition hover:bg-black/60"
           aria-label={isMuted ? "Unmute" : "Mute"}
         >
           {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
@@ -334,7 +388,7 @@ function ShortVideoItem({
             event.stopPropagation();
             togglePlay();
           }}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition hover:bg-black/65"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition hover:bg-black/60"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
@@ -348,7 +402,7 @@ function ShortVideoItem({
           type="button"
           onClick={handleToggleMyList}
           disabled={isUpdatingList}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition hover:bg-black/65 disabled:opacity-60"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition hover:bg-black/60 disabled:opacity-60"
           aria-label={isInMyList ? "Remove from My List" : "Add to My List"}
         >
           {isInMyList ? <Check size={20} /> : <Plus size={20} />}
@@ -357,18 +411,33 @@ function ShortVideoItem({
         <Link
           href={`/watch/${video.id}`}
           onClick={(event) => event.stopPropagation()}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-accent/30 transition hover:bg-accent-hover"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-accent/30 transition hover:bg-accent-hover"
           aria-label={`Open ${video.title}`}
         >
           <Maximize2 size={19} />
         </Link>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-30 h-1 bg-white/15">
-        <div
-          className="h-full bg-accent transition-[width]"
-          style={{ width: `${progressPercent}%` }}
-        />
+      <div
+        ref={seekBarRef}
+        className="absolute inset-x-3 bottom-2 z-30 flex h-7 cursor-pointer touch-none items-center"
+        onPointerDown={handleSeekPointerDown}
+        onPointerMove={handleSeekPointerMove}
+        onPointerUp={handleSeekPointerEnd}
+        onPointerCancel={handleSeekPointerEnd}
+        onClick={(event) => event.stopPropagation()}
+        aria-label="Seek short video"
+      >
+        <div className="relative h-1.5 w-full rounded-full bg-white/20">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-accent transition-[width]"
+            style={{ width: `${progressPercent}%` }}
+          />
+          <div
+            className="absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-accent shadow-lg shadow-accent/40"
+            style={{ left: `${progressPercent}%`, transform: "translate(-50%, -50%)" }}
+          />
+        </div>
       </div>
     </div>
   );
