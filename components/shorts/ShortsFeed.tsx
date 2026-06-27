@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import {
   Check,
   Clock,
+  Heart,
   Loader2,
   Maximize2,
   Pause,
@@ -12,6 +19,7 @@ import {
   Plus,
   Volume2,
   VolumeX,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import MatchBadge from "@/components/shared/MatchBadge";
@@ -21,6 +29,40 @@ import type { VideoType } from "@/types";
 
 interface ShortsFeedProps {
   videos: VideoType[];
+}
+
+// Tap-target & timing constants tuned for thumb interaction (44px Apple/Google minimum)
+const TAP_TARGET = 44;
+const DOUBLE_TAP_WINDOW_MS = 300;
+const DOUBLE_TAP_DISTANCE_PX = 56;
+const HOLD_TO_SPEED_DELAY_MS = 250;
+const HOLD_SPEED_MULTIPLIER = 2;
+const PROGRESS_SAVE_INTERVAL_MS = 5000;
+const SCROLL_CANCEL_DISTANCE_PX = 14;
+
+function getConnectionSpeedHint(): "slow" | "fast" {
+  if (typeof navigator === "undefined") return "fast";
+  // navigator.connection is not in the official TS DOM lib yet
+  const nav = navigator as Navigator & {
+    connection?: { effectiveType?: string; saveData?: boolean };
+  };
+  const conn = nav.connection;
+  if (!conn) return "fast";
+  if (conn.saveData) return "slow";
+  if (conn.effectiveType === "2g" || conn.effectiveType === "slow-2g" || conn.effectiveType === "3g") {
+    return "slow";
+  }
+  return "fast";
+}
+
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // no-op: vibration not supported/allowed
+    }
+  }
 }
 
 export default function ShortsFeed({ videos }: ShortsFeedProps) {
@@ -73,7 +115,10 @@ export default function ShortsFeed({ videos }: ShortsFeedProps) {
   );
 
   return (
-    <div className="h-[calc(100svh-3.5rem-5rem)] overflow-y-auto snap-y snap-mandatory bg-black md:h-[calc(100svh-68px)]">
+    <div
+      className="h-[calc(100svh-3.5rem-5rem)] overflow-y-auto snap-y snap-mandatory bg-black [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:h-[calc(100svh-68px)]"
+      style={{ overscrollBehaviorY: "contain" }}
+    >
       {videos.map((video, index) => (
         <section
           key={video.id}
@@ -108,12 +153,29 @@ function ShortVideoItem({
   const videoRef = useRef<HTMLVideoElement>(null);
   const seekBarRef = useRef<HTMLDivElement>(null);
   const lastSaveRef = useRef(0);
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(
+    null
+  );
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const singleTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const wasHoldSpeedRef = useRef(false);
+  const didMoveRef = useRef(false);
+  const tapPositionRef = useRef<{ x: number; y: number } | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(video.duration || 0);
   const [isUpdatingList, setIsUpdatingList] = useState(false);
+  const [chromeHidden, setChromeHidden] = useState(false);
+  const [isHoldSpeeding, setIsHoldSpeeding] = useState(false);
+  const [heartBurst, setHeartBurst] = useState<{ x: number; y: number; key: number } | null>(
+    null
+  );
+  const [hasError, setHasError] = useState(false);
 
   const addToMyList = useAppStore((state) => state.addToMyList);
   const removeFromMyList = useAppStore((state) => state.removeFromMyList);
@@ -121,6 +183,7 @@ function ShortVideoItem({
 
   const sourceUrl = video.hlsUrl || video.cloudinaryUrl;
 
+  // ---- HLS / source setup (unchanged streaming logic, network-aware buffering) ----
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
@@ -138,6 +201,7 @@ function ShortVideoItem({
     }
 
     setIsLoading(videoElement.readyState < 3);
+    setHasError(false);
 
     const initialize = async () => {
       if (sourceUrl.includes(".m3u8")) {
@@ -146,11 +210,12 @@ function ShortVideoItem({
           if (cancelled) return;
 
           if (Hls.isSupported()) {
+            const speedHint = getConnectionSpeedHint();
             hls = new Hls({
               enableWorker: true,
-              maxBufferLength: 10,
+              maxBufferLength: speedHint === "slow" ? 6 : 10,
               backBufferLength: 5,
-              startLevel: -1,
+              startLevel: speedHint === "slow" ? 0 : -1,
             });
             hls.loadSource(sourceUrl);
             hls.attachMedia(videoElement);
@@ -158,6 +223,7 @@ function ShortVideoItem({
             hls.on(Hls.Events.ERROR, (_event, data) => {
               if (data.fatal) {
                 videoElement.src = video.cloudinaryUrl;
+                setHasError(false);
               }
             });
           } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
@@ -181,6 +247,7 @@ function ShortVideoItem({
     };
   }, [shouldLoad, sourceUrl, video.cloudinaryUrl]);
 
+  // ---- Active / mute sync ----
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement || !shouldLoad) return;
@@ -205,6 +272,26 @@ function ShortVideoItem({
     play();
   }, [active, isMuted, shouldLoad]);
 
+  // Reset transient UI state whenever the item becomes inactive (avoids stuck overlays on fast scroll)
+  useEffect(() => {
+    if (!active) {
+      setChromeHidden(false);
+      setIsHoldSpeeding(false);
+      wasHoldSpeedRef.current = false;
+      didMoveRef.current = false;
+      lastTapRef.current = null;
+      if (videoRef.current) videoRef.current.playbackRate = 1;
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
+        holdTimeoutRef.current = null;
+      }
+      if (singleTapTimeoutRef.current) {
+        clearTimeout(singleTapTimeoutRef.current);
+        singleTapTimeoutRef.current = null;
+      }
+    }
+  }, [active]);
+
   const togglePlay = useCallback(async () => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
@@ -223,6 +310,7 @@ function ShortVideoItem({
   }, []);
 
   const toggleMute = useCallback(() => {
+    vibrate(10);
     setIsMuted((value) => {
       const nextValue = !value;
       if (videoRef.current) videoRef.current.muted = nextValue;
@@ -237,7 +325,7 @@ function ShortVideoItem({
     setCurrentTime(videoElement.currentTime);
 
     const now = Date.now();
-    if (now - lastSaveRef.current < 5000) return;
+    if (now - lastSaveRef.current < PROGRESS_SAVE_INTERVAL_MS) return;
     lastSaveRef.current = now;
 
     fetch(`/api/videos/${video.id}/progress`, {
@@ -247,29 +335,34 @@ function ShortVideoItem({
         progress: videoElement.currentTime,
         duration: videoElement.duration || duration,
       }),
+      keepalive: true,
     }).catch(() => {});
   }, [duration, video.id]);
 
-  const handleToggleMyList = async (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (isUpdatingList) return;
+  const handleToggleMyList = useCallback(
+    async (event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      if (isUpdatingList) return;
 
-    setIsUpdatingList(true);
-    try {
-      if (isInMyList) {
-        await removeFromMyList(video.id);
-        toast.success("Removed from My List");
-      } else {
-        await addToMyList(video.id);
-        toast.success("Added to My List");
+      setIsUpdatingList(true);
+      try {
+        if (isInMyList) {
+          await removeFromMyList(video.id);
+          toast.success("Removed from My List");
+        } else {
+          await addToMyList(video.id);
+          toast.success("Added to My List");
+        }
+      } catch (error) {
+        toast.error(getErrorMessage(error, "Could not update My List"));
+      } finally {
+        setIsUpdatingList(false);
       }
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Could not update My List"));
-    } finally {
-      setIsUpdatingList(false);
-    }
-  };
+    },
+    [addToMyList, isInMyList, isUpdatingList, removeFromMyList, video.id]
+  );
 
+  // ---- Seek bar (unchanged logic, kept as pointer-based scrubbing) ----
   const seekToClientX = useCallback(
     (clientX: number) => {
       const videoElement = videoRef.current;
@@ -320,17 +413,171 @@ function ShortVideoItem({
     []
   );
 
+  // ---- Double-tap-to-like + press-and-hold-to-2x-speed + single-tap play/pause ----
+  // These three gestures share the same pointer area, so they're coordinated together
+  // to avoid conflicting triggers (e.g. a hold shouldn't also register as a tap).
+  const triggerLike = useCallback(
+    (x: number, y: number) => {
+      vibrate(15);
+      setHeartBurst({ x, y, key: Date.now() });
+      if (!isInMyList) {
+        handleToggleMyList();
+      }
+    },
+    [handleToggleMyList, isInMyList]
+  );
+
+  const handlePointerDownOnVideo = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      tapPositionRef.current = { x: event.clientX, y: event.clientY };
+      didMoveRef.current = false;
+
+      holdTimeoutRef.current = setTimeout(() => {
+        const videoElement = videoRef.current;
+        if (!videoElement) return;
+        wasHoldSpeedRef.current = true;
+        videoElement.playbackRate = HOLD_SPEED_MULTIPLIER;
+        setIsHoldSpeeding(true);
+        vibrate(20);
+      }, HOLD_TO_SPEED_DELAY_MS);
+    },
+    []
+  );
+
+  const handlePointerMoveOnVideo = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const tapPosition = tapPositionRef.current;
+      if (!tapPosition) return;
+
+      const deltaX = Math.abs(event.clientX - tapPosition.x);
+      const deltaY = Math.abs(event.clientY - tapPosition.y);
+
+      if (
+        deltaX < SCROLL_CANCEL_DISTANCE_PX &&
+        deltaY < SCROLL_CANCEL_DISTANCE_PX
+      ) {
+        return;
+      }
+
+      didMoveRef.current = true;
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
+        holdTimeoutRef.current = null;
+      }
+    },
+    []
+  );
+
+  const handlePointerUpOnVideo = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
+        holdTimeoutRef.current = null;
+      }
+
+      const videoElement = videoRef.current;
+
+      if (didMoveRef.current) {
+        didMoveRef.current = false;
+        tapPositionRef.current = null;
+        return;
+      }
+
+      if (wasHoldSpeedRef.current) {
+        // This was a hold-to-speed gesture, not a tap; restore normal speed.
+        if (videoElement) videoElement.playbackRate = 1;
+        wasHoldSpeedRef.current = false;
+        setIsHoldSpeeding(false);
+        tapPositionRef.current = null;
+        return;
+      }
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const tapX = event.clientX - rect.left;
+      const tapY = event.clientY - rect.top;
+      const now = Date.now();
+      const lastTap = lastTapRef.current;
+      const isCloseDoubleTap =
+        lastTap &&
+        now - lastTap.time < DOUBLE_TAP_WINDOW_MS &&
+        Math.abs(lastTap.x - tapX) < DOUBLE_TAP_DISTANCE_PX &&
+        Math.abs(lastTap.y - tapY) < DOUBLE_TAP_DISTANCE_PX;
+
+      if (isCloseDoubleTap) {
+        triggerLike(tapX, tapY);
+        lastTapRef.current = null;
+        tapPositionRef.current = null;
+        return;
+      }
+
+      lastTapRef.current = { time: now, x: tapX, y: tapY };
+
+      // Single tap: wait briefly in case a second tap follows; otherwise toggle play
+      // and, if chrome is hidden, reveal it first (so the first tap after hiding never
+      // accidentally pauses without feedback).
+      if (singleTapTimeoutRef.current) {
+        clearTimeout(singleTapTimeoutRef.current);
+      }
+      singleTapTimeoutRef.current = setTimeout(() => {
+        const stillSingleTap =
+          lastTapRef.current && lastTapRef.current.time === now;
+        if (stillSingleTap) {
+          if (chromeHidden) {
+            setChromeHidden(false);
+          } else {
+            togglePlay();
+          }
+          lastTapRef.current = null;
+        }
+        singleTapTimeoutRef.current = null;
+      }, DOUBLE_TAP_WINDOW_MS);
+      tapPositionRef.current = null;
+    },
+    [chromeHidden, togglePlay, triggerLike]
+  );
+
+  const handlePointerCancelOnVideo = useCallback(() => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (wasHoldSpeedRef.current && videoRef.current) {
+      videoRef.current.playbackRate = 1;
+    }
+    wasHoldSpeedRef.current = false;
+    didMoveRef.current = false;
+    tapPositionRef.current = null;
+    setIsHoldSpeeding(false);
+  }, []);
+
+  const toggleChromeHidden = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+    setChromeHidden((value) => !value);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+      if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
+    };
+  }, []);
+
   const progressPercent =
     duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
+  const showBuffering = active && isLoading && !hasError;
+  const showPausedOverlay = !isPlaying && !isLoading && !chromeHidden && !isHoldSpeeding;
+
+  const posterSrc = useMemo(
+    () => video.posterUrl || video.thumbnailUrl,
+    [video.posterUrl, video.thumbnailUrl]
+  );
+
   return (
-    <div
-      className="group relative h-full w-full cursor-pointer touch-manipulation overflow-hidden bg-black"
-      onClick={togglePlay}
-    >
+    <div className="relative h-full w-full overflow-hidden bg-black">
       <video
         ref={videoRef}
-        poster={video.posterUrl || video.thumbnailUrl}
+        poster={posterSrc}
         muted={isMuted}
         playsInline
         preload={active ? "auto" : shouldLoad ? "metadata" : "none"}
@@ -345,25 +592,75 @@ function ShortVideoItem({
         onPause={() => setIsPlaying(false)}
         onEnded={onEnded}
         onTimeUpdate={handleTimeUpdate}
+        onError={() => setHasError(true)}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+      {/* Gesture capture layer: tap / double-tap / press-hold, sits above video, below UI chrome */}
+      <div
+        className="absolute inset-0 z-[5] touch-manipulation select-none"
+        onPointerDown={handlePointerDownOnVideo}
+        onPointerMove={handlePointerMoveOnVideo}
+        onPointerUp={handlePointerUpOnVideo}
+        onPointerCancel={handlePointerCancelOnVideo}
+        onPointerLeave={handlePointerCancelOnVideo}
+        role="button"
+        aria-label={isPlaying ? "Pause video" : "Play video"}
+      />
 
-      {active && isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-200 ${
+          chromeHidden ? "opacity-0" : "opacity-100"
+        }`}
+      />
+
+      {showBuffering && (
+        <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center">
           <Loader2 size={30} className="animate-spin text-white/80" />
         </div>
       )}
 
-      {!isPlaying && !isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
+      {hasError && active && (
+        <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center px-8 text-center">
+          <p className="text-sm text-white/70">
+            This video couldn&apos;t load. Swipe to continue.
+          </p>
+        </div>
+      )}
+
+      {showPausedOverlay && !hasError && (
+        <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/45 backdrop-blur-sm">
             <Play size={34} fill="white" className="ml-1 text-white" />
           </div>
         </div>
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pr-16 pb-11 text-white md:px-5 md:pr-20 md:pb-12">
+      {isHoldSpeeding && (
+        <div className="pointer-events-none absolute top-1/2 left-1/2 z-[6] -translate-x-1/2 -translate-y-1/2">
+          <div className="flex items-center gap-1.5 rounded-full bg-black/55 px-4 py-2 text-white backdrop-blur-md">
+            <Zap size={16} fill="white" />
+            <span className="text-sm font-semibold tabular-nums">2x</span>
+          </div>
+        </div>
+      )}
+
+      {heartBurst && (
+        <HeartBurst
+          key={heartBurst.key}
+          x={heartBurst.x}
+          y={heartBurst.y}
+          onDone={() => setHeartBurst(null)}
+        />
+      )}
+
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pr-16 text-white transition-all duration-200 md:px-5 md:pr-20 ${
+          chromeHidden ? "translate-y-3 opacity-0" : "translate-y-0 opacity-100"
+        }`}
+        style={{
+          paddingBottom: "calc(2.75rem + env(safe-area-inset-bottom, 0px))",
+        }}
+      >
         <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-white/70">
           <MatchBadge score={video.matchScore || 85} size="sm" />
           <span className="flex items-center gap-1">
@@ -384,49 +681,62 @@ function ShortVideoItem({
         )}
       </div>
 
-      <div className="absolute right-3 top-3 z-20 flex flex-col items-center gap-2 md:right-4 md:top-4">
-        <button
-          type="button"
+      <div
+        className={`absolute right-3 top-3 z-20 flex flex-col items-center gap-2.5 transition-all duration-200 md:right-4 md:top-4 ${
+          chromeHidden
+            ? "pointer-events-none translate-x-4 opacity-0"
+            : "pointer-events-auto translate-x-0 opacity-100"
+        }`}
+        style={{ top: "calc(0.75rem + env(safe-area-inset-top, 0px))" }}
+      >
+        <ChromeButton
           onClick={(event) => {
             event.stopPropagation();
             toggleMute();
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition hover:bg-black/60"
-          aria-label={isMuted ? "Unmute" : "Mute"}
+          ariaLabel={isMuted ? "Unmute" : "Mute"}
         >
           {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-        </button>
+        </ChromeButton>
 
-        <button
-          type="button"
+        <ChromeButton
           onClick={(event) => {
             event.stopPropagation();
             togglePlay();
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition hover:bg-black/60"
-          aria-label={isPlaying ? "Pause" : "Play"}
+          ariaLabel={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
             <Pause size={20} fill="white" />
           ) : (
             <Play size={20} fill="white" className="ml-0.5" />
           )}
-        </button>
+        </ChromeButton>
 
-        <button
-          type="button"
+        <ChromeButton
           onClick={handleToggleMyList}
           disabled={isUpdatingList}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition hover:bg-black/60 disabled:opacity-60"
-          aria-label={isInMyList ? "Remove from My List" : "Add to My List"}
+          ariaLabel={isInMyList ? "Remove from My List" : "Add to My List"}
         >
           {isInMyList ? <Check size={20} /> : <Plus size={20} />}
-        </button>
+        </ChromeButton>
+
+        <ChromeButton
+          onClick={toggleChromeHidden}
+          ariaLabel={chromeHidden ? "Show overlay" : "Hide overlay"}
+        >
+          <Heart
+            size={20}
+            fill={isInMyList ? "currentColor" : "none"}
+            className={isInMyList ? "text-accent" : ""}
+          />
+        </ChromeButton>
 
         <Link
           href={`/watch/${video.id}`}
           onClick={(event) => event.stopPropagation()}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-accent/30 transition hover:bg-accent-hover"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-accent/30 transition active:scale-90 hover:bg-accent-hover"
+          style={{ minWidth: TAP_TARGET, minHeight: TAP_TARGET }}
           aria-label={`Open ${video.title}`}
         >
           <Maximize2 size={19} />
@@ -435,13 +745,22 @@ function ShortVideoItem({
 
       <div
         ref={seekBarRef}
-        className="absolute inset-x-3 bottom-2 z-30 flex h-7 cursor-pointer touch-none items-center"
+        className={`absolute inset-x-3 z-30 flex h-9 cursor-pointer touch-none items-center transition-opacity duration-200 ${
+          chromeHidden
+            ? "pointer-events-none opacity-0"
+            : "pointer-events-auto opacity-100"
+        }`}
+        style={{ bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
         onPointerDown={handleSeekPointerDown}
         onPointerMove={handleSeekPointerMove}
         onPointerUp={handleSeekPointerEnd}
         onPointerCancel={handleSeekPointerEnd}
         onClick={(event) => event.stopPropagation()}
         aria-label="Seek short video"
+        role="slider"
+        aria-valuemin={0}
+        aria-valuemax={duration}
+        aria-valuenow={currentTime}
       >
         <div className="relative h-1.5 w-full rounded-full bg-white/20">
           <div
@@ -454,6 +773,81 @@ function ShortVideoItem({
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Shared 44x44 tap-target wrapper for the right-rail icon buttons. */
+function ChromeButton({
+  children,
+  onClick,
+  ariaLabel,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick: (event: React.MouseEvent) => void;
+  ariaLabel: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      style={{ minWidth: TAP_TARGET, minHeight: TAP_TARGET }}
+      className="flex items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition active:scale-90 hover:bg-black/60 disabled:opacity-60"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Brief heart-burst animation rendered at the double-tap point, then self-removes. */
+function HeartBurst({
+  x,
+  y,
+  onDone,
+}: {
+  x: number;
+  y: number;
+  onDone: () => void;
+}) {
+  useEffect(() => {
+    const timeout = setTimeout(onDone, 700);
+    return () => clearTimeout(timeout);
+  }, [onDone]);
+
+  return (
+    <div
+      className="pointer-events-none absolute z-[7]"
+      style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
+    >
+      <Heart
+        size={84}
+        fill="white"
+        className="text-white drop-shadow-lg [animation:shorts-heart-burst_700ms_ease-out_forwards]"
+      />
+      <style jsx>{`
+        @keyframes shorts-heart-burst {
+          0% {
+            transform: scale(0.4);
+            opacity: 0;
+          }
+          25% {
+            transform: scale(1.15);
+            opacity: 1;
+          }
+          45% {
+            transform: scale(0.95);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }
