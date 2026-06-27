@@ -134,7 +134,7 @@ export default function ShortsFeed({ videos }: ShortsFeedProps) {
 
   return (
     <div
-      className="fixed inset-x-0 top-0 h-[calc(100dvh-var(--shorts-bottom-nav))] overflow-y-auto snap-y snap-mandatory bg-black [-webkit-overflow-scrolling:touch] [--shorts-bottom-nav:calc(4.25rem+max(0.75rem,env(safe-area-inset-bottom,0px)))] [scrollbar-width:none] md:static md:h-[calc(100dvh-68px)] md:[--shorts-bottom-nav:0rem]"
+      className="fixed inset-0 h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-black [-webkit-overflow-scrolling:touch] [--shorts-nav-offset:5.5rem] [scrollbar-width:none] md:static md:h-[calc(100dvh-68px)] md:[--shorts-nav-offset:0rem]"
       style={{ overscrollBehaviorY: "contain" }}
     >
       {videos.map((video, index) => (
@@ -145,8 +145,7 @@ export default function ShortsFeed({ videos }: ShortsFeedProps) {
           className="relative mx-auto h-full w-full snap-start snap-always overflow-hidden bg-black md:max-w-[460px] md:border-x md:border-glass-border"
           style={{
             contentVisibility: "auto",
-            containIntrinsicSize:
-              "calc(100dvh - var(--shorts-bottom-nav, 0rem))",
+            containIntrinsicSize: "100dvh",
           }}
         >
           <ShortVideoItem
@@ -603,7 +602,7 @@ function ShortVideoItem({
         muted={isMuted}
         playsInline
         preload={active ? "auto" : shouldLoad ? "metadata" : "none"}
-        className="h-full w-full bg-black object-contain"
+        className="absolute inset-x-0 top-0 h-[calc(100%-var(--shorts-nav-offset))] w-full bg-black object-contain md:inset-0 md:h-full"
         onLoadedMetadata={() => {
           const videoElement = videoRef.current;
           if (videoElement?.duration) setDuration(videoElement.duration);
@@ -680,7 +679,8 @@ function ShortVideoItem({
           chromeHidden ? "translate-y-3 opacity-0" : "translate-y-0 opacity-100"
         }`}
         style={{
-          paddingBottom: "2.75rem",
+          paddingBottom:
+            "calc(var(--shorts-nav-offset) + 2.75rem + env(safe-area-inset-bottom, 0px))",
         }}
       >
         <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-white/70">
@@ -773,7 +773,8 @@ function ShortVideoItem({
             : "pointer-events-auto opacity-100"
         }`}
         style={{
-          bottom: "0.5rem",
+          bottom:
+            "calc(var(--shorts-nav-offset) + 0.5rem + env(safe-area-inset-bottom, 0px))",
         }}
         onPointerDown={handleSeekPointerDown}
         onPointerMove={handleSeekPointerMove}
