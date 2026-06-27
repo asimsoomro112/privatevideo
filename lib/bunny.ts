@@ -95,7 +95,7 @@ export function getBunnyVideoUrls(videoId: string): BunnyUrls {
 
   return {
     hlsUrl: `${baseUrl}/playlist.m3u8`,
-    directUrl: `${baseUrl}/play_720p.mp4`,
+    directUrl: `${baseUrl}/play_360p.mp4`,
     thumbnailUrl: `${baseUrl}/thumbnail.jpg`,
     posterUrl: `${baseUrl}/thumbnail.jpg`,
     trailerUrl: null,
