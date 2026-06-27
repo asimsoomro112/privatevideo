@@ -14,11 +14,21 @@ export default function SmoothScroll({
   children: React.ReactNode;
 }) {
   const lenisRef = useRef<Lenis | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Initialize Lenis smooth scroll
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+    const isMobileWidth = window.matchMedia("(max-width: 767px)").matches;
+
+    if (prefersReducedMotion || isTouchDevice || isMobileWidth) {
+      return;
+    }
+
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 0.75,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       smoothWheel: true,
@@ -29,11 +39,14 @@ export default function SmoothScroll({
     // RAF loop
     function raf(time: number) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      animationFrameRef.current = requestAnimationFrame(raf);
     }
-    requestAnimationFrame(raf);
+    animationFrameRef.current = requestAnimationFrame(raf);
 
     return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       lenis.destroy();
     };
   }, []);

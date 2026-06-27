@@ -2,6 +2,7 @@ import { Film } from "lucide-react";
 import type { Metadata } from "next";
 import VideoGrid from "@/components/home/VideoGrid";
 import { prisma } from "@/lib/prisma";
+import { shuffleItems } from "@/lib/randomize";
 import { toClientVideo } from "@/lib/video-serializer";
 import { SHORT_VIDEO_MAX_SECONDS } from "@/lib/video-duration";
 
@@ -22,7 +23,7 @@ export default async function LongsPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  const videos = videoRecords.map(toClientVideo);
+  const videos = shuffleItems(videoRecords.map(toClientVideo));
 
   if (videos.length === 0) {
     return (
@@ -44,7 +45,7 @@ export default async function LongsPage() {
     <div className="min-h-screen pt-6 md:pt-8">
       <VideoGrid
         title="Long Videos"
-        description="All long videos, newest first."
+        description="All long videos, shuffled every visit."
         videos={videos}
       />
     </div>

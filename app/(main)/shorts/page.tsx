@@ -2,6 +2,7 @@ import { Clapperboard } from "lucide-react";
 import type { Metadata } from "next";
 import ShortsFeed from "@/components/shorts/ShortsFeed";
 import { prisma } from "@/lib/prisma";
+import { shuffleItems } from "@/lib/randomize";
 import { toClientVideo } from "@/lib/video-serializer";
 import { SHORT_VIDEO_MAX_SECONDS } from "@/lib/video-duration";
 
@@ -23,7 +24,7 @@ export default async function ShortsPage() {
     orderBy: [{ createdAt: "desc" }],
   });
 
-  const videos = videoRecords.map(toClientVideo);
+  const videos = shuffleItems(videoRecords.map(toClientVideo));
 
   if (videos.length === 0) {
     return (

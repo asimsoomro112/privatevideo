@@ -58,6 +58,7 @@ export default async function HomePage() {
 
   const latestLongVideos = longVideos.slice(0, 24);
   const latestShortVideos = shortVideos.slice(0, 24);
+  const recentlyAddedVideos = allVideos.slice(0, 24);
   const heroVideo =
     featuredVideo && isLongFormVideo(featuredVideo)
       ? featuredVideo
@@ -99,6 +100,10 @@ export default async function HomePage() {
             watchHistory={watchHistory}
             showProgress
           />
+        )}
+
+        {recentlyAddedVideos.length > 0 && (
+          <VideoRow title="Recently Added" videos={recentlyAddedVideos} />
         )}
 
         {latestLongVideos.length > 0 && (
