@@ -114,9 +114,27 @@ export default function ShortsFeed({ videos }: ShortsFeedProps) {
     [videos]
   );
 
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+    };
+  }, []);
+
   return (
     <div
-      className="h-[calc(100svh-3.5rem-5rem)] overflow-y-auto snap-y snap-mandatory bg-black [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:h-[calc(100svh-68px)]"
+      className="fixed inset-0 h-[100dvh] overflow-y-auto snap-y snap-mandatory bg-black [-webkit-overflow-scrolling:touch] [--shorts-nav-offset:5.5rem] [scrollbar-width:none] md:static md:h-[calc(100dvh-68px)] md:[--shorts-nav-offset:0rem]"
       style={{ overscrollBehaviorY: "contain" }}
     >
       {videos.map((video, index) => (
@@ -581,7 +599,7 @@ function ShortVideoItem({
         muted={isMuted}
         playsInline
         preload={active ? "auto" : shouldLoad ? "metadata" : "none"}
-        className="h-full w-full bg-black object-contain"
+        className="h-full w-full bg-black object-cover"
         onLoadedMetadata={() => {
           const videoElement = videoRef.current;
           if (videoElement?.duration) setDuration(videoElement.duration);
@@ -658,7 +676,8 @@ function ShortVideoItem({
           chromeHidden ? "translate-y-3 opacity-0" : "translate-y-0 opacity-100"
         }`}
         style={{
-          paddingBottom: "calc(2.75rem + env(safe-area-inset-bottom, 0px))",
+          paddingBottom:
+            "calc(var(--shorts-nav-offset) + 2.75rem + env(safe-area-inset-bottom, 0px))",
         }}
       >
         <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-white/70">
@@ -750,7 +769,10 @@ function ShortVideoItem({
             ? "pointer-events-none opacity-0"
             : "pointer-events-auto opacity-100"
         }`}
-        style={{ bottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{
+          bottom:
+            "calc(var(--shorts-nav-offset) + 0.5rem + env(safe-area-inset-bottom, 0px))",
+        }}
         onPointerDown={handleSeekPointerDown}
         onPointerMove={handleSeekPointerMove}
         onPointerUp={handleSeekPointerEnd}

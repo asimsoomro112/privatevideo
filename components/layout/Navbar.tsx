@@ -19,6 +19,7 @@ export default function Navbar() {
   const [showSearch, setShowSearch] = useState(false);
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const isShorts = pathname === "/shorts";
 
   // Detect scroll to change navbar background
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function Navbar() {
     <header
       className={cn(
         "sticky top-0 z-50 w-full transition-all duration-500 ease-out",
+        isShorts && "max-md:hidden",
         isHome && !isScrolled
           ? "bg-bg-primary/80 backdrop-blur-md"
           : "border-b border-glass-border bg-bg-primary/95 backdrop-blur-xl shadow-2xl shadow-black/50"
