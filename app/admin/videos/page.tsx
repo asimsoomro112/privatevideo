@@ -1,5 +1,5 @@
 // ===========================================
-// HerPrivateCinema - Admin Videos Management
+// PrivateVideos - Admin Videos Management
 // ===========================================
 // Table of all videos with real edit/delete/publish actions.
 

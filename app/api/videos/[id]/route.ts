@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Single Video API Route
+// PrivateVideos - Single Video API Route
 // ===========================================
 // GET /api/videos/[id] - fetch video details
 // PATCH /api/videos/[id] - update metadata

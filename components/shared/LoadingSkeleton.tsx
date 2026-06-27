@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Loading Skeleton Components
+// PrivateVideos - Loading Skeleton Components
 // ===========================================
 // Shimmer-animated skeleton loaders for premium loading states.
 

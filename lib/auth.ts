@@ -1,5 +1,5 @@
 // ===========================================
-// HerPrivateCinema - Single Password Auth
+// PrivateVideos - Single Password Auth
 // ===========================================
 
 import NextAuth from "next-auth";
@@ -39,9 +39,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         return {
-          id: "herprivatecinema-single-user",
+          id: "privatevideos-single-user",
           name: "My Love",
-          email: "private@herprivatecinema.local",
+          email: "private@privatevideos.local",
           role: "ADMIN",
         };
       },
@@ -57,7 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = String(token.id || "herprivatecinema-single-user");
+        session.user.id = String(token.id || "privatevideos-single-user");
         session.user.role = "ADMIN";
       }
       return session;

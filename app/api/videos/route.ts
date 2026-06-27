@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - API route for listing videos
+// PrivateVideos - API route for listing videos
 // ===========================================
 // GET /api/videos - returns all published videos or filtered by categories.
 

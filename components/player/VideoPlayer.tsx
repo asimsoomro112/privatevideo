@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Advanced Video Player
+// PrivateVideos - Advanced Video Player
 // ===========================================
 // Custom HLS video player with adaptive bitrate streaming,
 // custom controls, PiP, fullscreen, resume, and progress tracking.

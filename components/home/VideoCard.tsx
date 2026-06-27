@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Video Card Component
+// PrivateVideos - Video Card Component
 // ===========================================
 // Netflix-style video card with thumbnail, hover controls, list toggle,
 // match score, duration, and optional progress bar.

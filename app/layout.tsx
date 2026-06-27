@@ -1,20 +1,20 @@
 // ===========================================
-// HerPrivateCinema - Root Layout
+// PrivateVideos - Root Layout
 // ===========================================
 
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "HerPrivateCinema - Premium Private Streaming",
-    template: "%s | HerPrivateCinema",
+    default: `${SITE_NAME} - Premium Private Streaming`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "A private premium cinematic video streaming platform with adaptive Cloudinary playback.",
+  description: SITE_DESCRIPTION,
   keywords: ["streaming", "video", "private", "premium", "cinema"],
-  authors: [{ name: "HerPrivateCinema" }],
+  authors: [{ name: SITE_NAME }],
   robots: {
     index: false,
     follow: false,

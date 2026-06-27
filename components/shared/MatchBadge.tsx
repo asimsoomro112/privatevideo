@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Match Score Badge
+// PrivateVideos - Match Score Badge
 // ===========================================
 // Displays a green match percentage badge (Netflix-style).
 

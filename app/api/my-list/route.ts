@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - My List API Route
+// PrivateVideos - My List API Route
 // ===========================================
 // POST /api/my-list - adds video to user's saved list.
 // DELETE /api/my-list - removes video from user's saved list.

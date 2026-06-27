@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Utility Functions
+// PrivateVideos - Utility Functions
 // ===========================================
 
 import { clsx, type ClassValue } from "clsx";

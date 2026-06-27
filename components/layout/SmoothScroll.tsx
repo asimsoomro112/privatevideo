@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Lenis Smooth Scroll Provider
+// PrivateVideos - Lenis Smooth Scroll Provider
 // ===========================================
 // Wraps the app with Lenis for buttery smooth scrolling.
 

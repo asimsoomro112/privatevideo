@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Homepage
+// PrivateVideos - Homepage
 // ===========================================
 // Netflix-style homepage with hero banner, continue watching,
 // and multiple categorized video rows.

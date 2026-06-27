@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Mobile Bottom Navigation
+// PrivateVideos - Mobile Bottom Navigation
 // ===========================================
 // Beautiful glassmorphism bottom nav bar for mobile devices.
 // Shows on screens < md breakpoint.

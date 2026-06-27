@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Search Bar Component
+// PrivateVideos - Search Bar Component
 // ===========================================
 // Expandable search input with instant results and suggestions.
 

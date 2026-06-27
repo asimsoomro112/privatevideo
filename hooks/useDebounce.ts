@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Custom useDebounce Hook
+// PrivateVideos - Custom useDebounce Hook
 // ===========================================
 // Simple utility hook to debounce fast changing inputs like search boxes.
 

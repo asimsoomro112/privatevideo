@@ -1,4 +1,4 @@
-# HerPrivateCinema
+# PrivateVideos
 
 A private, premium, mobile-first video streaming app built with Next.js 15, TypeScript, Tailwind CSS, Auth.js/NextAuth credentials, Prisma + PostgreSQL/Supabase, Zustand, framer-motion, hls.js, and Bunny Stream.
 
@@ -34,7 +34,7 @@ PRIVATE_ACCESS_PASSWORD="change-this-password"
 BUNNY_STREAM_LIBRARY_ID="your-bunny-stream-library-id"
 BUNNY_STREAM_ACCESS_KEY="your-bunny-stream-api-key"
 BUNNY_STREAM_HOSTNAME="your-bunny-cdn-hostname.b-cdn.net"
-NEXT_PUBLIC_SITE_NAME="HerPrivateCinema"
+NEXT_PUBLIC_SITE_NAME="PrivateVideos"
 ```
 
 ## Local Setup
@@ -48,7 +48,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-`npm run db:seed` creates the private user only and removes old StreamVault demo rows. It does not add fake videos.
+`npm run db:seed` creates the private user only and removes old PrivateVideos demo rows. It does not add fake videos.
 
 ## Private Access
 
@@ -88,11 +88,11 @@ The script detects categories from filenames and writes metadata to Prisma.
 
 ## Vercel Deployment
 
-Deploying StreamVault on Vercel requires transitioning from SQLite to a hosted relational database (e.g. PostgreSQL) because Vercel operates on an ephemeral, serverless runtime where local files do not persist.
+Deploying PrivateVideos on Vercel requires transitioning from SQLite to a hosted relational database (e.g. PostgreSQL) because Vercel operates on an ephemeral, serverless runtime where local files do not persist.
 
 ### 1. Configure the Database for Production
 
-StreamVault includes a helper command to quickly switch the database provider in `prisma/schema.prisma`.
+PrivateVideos includes a helper command to quickly switch the database provider in `prisma/schema.prisma`.
 
 *   **Switch to PostgreSQL (Production):**
     ```bash
@@ -140,7 +140,7 @@ npx prisma db push
    | `BUNNY_STREAM_LIBRARY_ID` | Your Bunny Stream Library ID. |
    | `BUNNY_STREAM_ACCESS_KEY` | Your Bunny Stream API key. |
    | `BUNNY_STREAM_HOSTNAME` | Your Bunny CDN hostname. |
-   | `NEXT_PUBLIC_SITE_NAME` | Your custom Site name (e.g., `HerPrivateCinema`). |
+   | `NEXT_PUBLIC_SITE_NAME` | Your custom Site name (e.g., `PrivateVideos`). |
 
 4. Click **Deploy**. Vercel will automatically trigger `"postinstall": "prisma generate"` during the install phase and compile the application.
 

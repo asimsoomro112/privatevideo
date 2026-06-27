@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - File Upload API Route
+// PrivateVideos - File Upload API Route
 // ===========================================
 // POST /api/upload - handles multipart video uploads from admin dashboard.
 // New uploads are stored in Bunny Stream.

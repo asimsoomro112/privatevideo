@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
 const ADMIN_ENTRY_PATH = "/vault-admin";
-const ADMIN_COOKIE_NAME = "herprivatecinema_admin_access";
+const ADMIN_COOKIE_NAME = "privatevideos_admin_access";
 const ADMIN_COOKIE_VALUE = "enabled";
 
 function hasAdminAccess(request: Parameters<Parameters<typeof auth>[0]>[0]) {

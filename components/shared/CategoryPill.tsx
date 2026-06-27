@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Category Pill
+// PrivateVideos - Category Pill
 // ===========================================
 // Small pill-shaped category tag.
 

@@ -1,5 +1,5 @@
 // ===========================================
-// HerPrivateCinema - Database Seed Script (SQLite compatible)
+// PrivateVideos - Database Seed Script (SQLite compatible)
 // ===========================================
 // Sets up the private access profile only. No demo videos are created.
 // Run with: npm run db:seed or npx tsx prisma/seed.ts
@@ -12,13 +12,13 @@ async function main() {
   console.log("Starting database seeding...");
 
   await prisma.user.upsert({
-    where: { email: "private@herprivatecinema.local" },
+    where: { email: "private@privatevideos.local" },
     update: {
       name: "My Love",
       role: "ADMIN",
     },
     create: {
-      email: "private@herprivatecinema.local",
+      email: "private@privatevideos.local",
       name: "My Love",
       hashedPassword: "single-password-auth",
       role: "ADMIN",

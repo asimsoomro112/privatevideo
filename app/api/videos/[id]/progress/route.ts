@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Playback Progress API Route
+// PrivateVideos - Playback Progress API Route
 // ===========================================
 // POST /api/videos/[id]/progress - updates progress tracking in watch history.
 

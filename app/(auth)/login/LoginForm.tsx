@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Heart, LockKeyhole, Loader2 } from "lucide-react";
+import { SITE_NAME } from "@/lib/site";
 
 export default function LoginForm({ callbackUrl }: { callbackUrl: string }) {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           <Heart size={26} fill="currentColor" />
         </div>
         <h1 className="text-2xl font-black tracking-tight text-text-primary sm:text-3xl">
-          {process.env.NEXT_PUBLIC_SITE_NAME || "HerPrivateCinema"}
+          {SITE_NAME}
         </h1>
         <p className="mt-2 text-sm text-text-muted">
           A private cinema made just for you.

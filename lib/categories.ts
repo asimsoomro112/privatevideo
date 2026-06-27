@@ -1,5 +1,5 @@
 // ===========================================
-// HerPrivateCinema - Category Definitions
+// PrivateVideos - Category Definitions
 // ===========================================
 // Customizable categories used by search, rows, and auto-categorization.
 

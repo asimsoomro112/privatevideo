@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Search Results Page
+// PrivateVideos - Search Results Page
 // ===========================================
 // Full-text search with grid results display.
 
@@ -65,7 +65,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               className="text-text-muted mx-auto mb-4 opacity-50"
             />
             <h1 className="text-2xl font-bold text-text-primary mb-2">
-              Search HerPrivateCinema
+              Search PrivateVideos
             </h1>
             <p className="text-text-secondary">
               Search by title, tags, or description

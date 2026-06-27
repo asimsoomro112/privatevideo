@@ -1,5 +1,5 @@
 // ===========================================
-// HerPrivateCinema - Navbar Component
+// PrivateVideos - Navbar Component
 // ===========================================
 // Premium cinematic top navigation bar with glassmorphism,
 // search, and user menu.
@@ -11,6 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SITE_NAME } from "@/lib/site";
 import SearchBar from "@/components/search/SearchBar";
 
 export default function Navbar() {
@@ -59,7 +60,7 @@ export default function Navbar() {
             id="nav-logo"
           >
             <span className="text-accent font-black text-xl md:text-2xl tracking-tighter transition-all group-hover:drop-shadow-[0_0_12px_rgba(229,9,20,0.5)]">
-              {process.env.NEXT_PUBLIC_SITE_NAME || "STREAMVAULT"}
+              {SITE_NAME}
             </span>
           </Link>
 

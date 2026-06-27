@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Prisma Client Singleton with SQLite compatibility extension
+// PrivateVideos - Prisma Client Singleton with SQLite compatibility extension
 // ===========================================
 // Extends the Prisma client to dynamically convert raw SQLite text columns
 // (categoriesRaw and tagsRaw) to arrays of strings (categories and tags)

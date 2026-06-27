@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Main Layout
+// PrivateVideos - Main Layout
 // ===========================================
 // Public layout for homepage, search, watch, and library pages.
 

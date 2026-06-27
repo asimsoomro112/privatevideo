@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Cloudinary Configuration
+// PrivateVideos - Cloudinary Configuration
 // ===========================================
 // Handles all Cloudinary SDK setup and helper functions
 // for video upload, HLS transformation, and thumbnail generation.
@@ -17,7 +17,7 @@ cloudinary.config({
 export default cloudinary;
 
 export function getCloudinaryUploadFolder(): string {
-  return process.env.CLOUDINARY_UPLOAD_FOLDER || "herprivatecinema/videos";
+  return process.env.CLOUDINARY_UPLOAD_FOLDER || "privatevideos/videos";
 }
 
 export function getCloudinaryStreamingProfile(): string {

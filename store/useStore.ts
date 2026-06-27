@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Zustand Global Client Store
+// PrivateVideos - Zustand Global Client Store
 // ===========================================
 // Manages global UI states, user watchlists, active profile details,
 // and smooth client updates without layout shifting.

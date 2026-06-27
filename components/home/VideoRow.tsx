@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Video Row Component
+// PrivateVideos - Video Row Component
 // ===========================================
 // Horizontal scrolling row of video cards with
 // drag-scroll, arrow navigation, and row title.

@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Admin Dashboard
+// PrivateVideos - Admin Dashboard
 // ===========================================
 // Overview page with stats and recent uploads.
 

@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - My List Page
+// PrivateVideos - My List Page
 // ===========================================
 // User's saved/bookmarked videos displayed in a grid.
 

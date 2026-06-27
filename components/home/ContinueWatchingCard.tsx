@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Continue Watching Card
+// PrivateVideos - Continue Watching Card
 // ===========================================
 // Special card variant for "Continue Watching" row
 // with prominent progress bar and resume button.

@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - 404 Not Found Page
+// PrivateVideos - 404 Not Found Page
 // ===========================================
 
 import Link from "next/link";

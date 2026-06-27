@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Watch Page
+// PrivateVideos - Watch Page
 // ===========================================
 // Full-screen video player page with video details.
 

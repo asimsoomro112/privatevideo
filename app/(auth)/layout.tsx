@@ -1,5 +1,5 @@
 // ===========================================
-// HerPrivateCinema - Auth Layout
+// PrivateVideos - Auth Layout
 // ===========================================
 // Layout for login/signup pages. No navbar, centered card.
 

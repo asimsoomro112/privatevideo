@@ -1,4 +1,4 @@
-// HerPrivateCinema - Bunny Stream bulk local video uploader.
+// PrivateVideos - Bunny Stream bulk local video uploader.
 // Usage: npm run bulk-upload -- "C:\Users\muham\Downloads\VIdeos"
 
 import crypto from "crypto";

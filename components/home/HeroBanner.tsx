@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Hero Banner Component
+// PrivateVideos - Hero Banner Component
 // ===========================================
 // Full-width cinematic hero with auto-playing muted video,
 // gradient overlays, GSAP animations, and call-to-action buttons.

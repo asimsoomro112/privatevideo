@@ -1,11 +1,11 @@
 // ===========================================
-// HerPrivateCinema - Private Single-User Profile
+// PrivateVideos - Private Single-User Profile
 // ===========================================
 // User-scoped features share one private profile after password login.
 
 import { prisma } from "@/lib/prisma";
 
-export const PUBLIC_USER_EMAIL = "private@herprivatecinema.local";
+export const PUBLIC_USER_EMAIL = "private@privatevideos.local";
 
 export async function getPublicUser() {
   return prisma.user.upsert({

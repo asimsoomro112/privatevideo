@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - TypeScript Type Definitions
+// PrivateVideos - TypeScript Type Definitions
 // ===========================================
 
 // -------------------------------------------

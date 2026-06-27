@@ -1,7 +1,7 @@
 // ===========================================
-// StreamVault - Admin Layout
+// PrivateVideos - Admin Layout
 // ===========================================
-// Protected admin pages for local HerPrivateCinema management.
+// Protected admin pages for local PrivateVideos management.
 
 import Link from "next/link";
 import {

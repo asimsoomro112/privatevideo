@@ -1,5 +1,5 @@
 // ===========================================
-// StreamVault - Prisma Schema
+// PrivateVideos - Prisma Schema
 // ===========================================
 // Supports both SQLite (local dev, provider="sqlite") and PostgreSQL (production, provider="postgresql").
 // Switch providers with: npm run db:sqlite / npm run db:postgres
