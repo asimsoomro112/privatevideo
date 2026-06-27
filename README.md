@@ -125,14 +125,18 @@ StreamVault includes a helper command to quickly switch the database provider in
 
 ### 2. Push Your Schema to PostgreSQL
 
-Once you've switched to PostgreSQL, set your Postgres connection string in your local environment and run Prisma's push command to create all tables in your cloud database instance (e.g. Neon, Supabase, Vercel Postgres):
+Once you've switched to PostgreSQL, set your Postgres connection strings in your local environment and run Prisma's push command to create all tables in your cloud database instance (e.g. Supabase, Neon, Vercel Postgres):
 
 ```bash
 # Switched to postgresql provider first
 npm run db:postgres
 
+# Supabase example:
+# DATABASE_URL should be the Transaction Pooler URL.
+# DIRECT_URL should be the Direct connection URL.
+
 # Push the schema structure to your database
-# (Ensure your DATABASE_URL is set to your Postgres instance in your terminal/environment)
+# (Ensure DATABASE_URL and DIRECT_URL are set in your terminal/environment)
 npx prisma db push
 ```
 
@@ -144,7 +148,8 @@ npx prisma db push
 
    | Variable | Value/Description |
    | :--- | :--- |
-   | `DATABASE_URL` | Your hosted Postgres connection string (starts with `postgresql://` or `postgres://`). |
+   | `DATABASE_URL` | Supabase Transaction Pooler / pooler connection string, usually port `6543`. |
+   | `DIRECT_URL` | Supabase direct connection string, usually port `5432`, used by Prisma schema operations. |
    | `NEXTAUTH_SECRET` | A secure, random 32-character secret (generate with `openssl rand -base64 32`). |
    | `AUTH_SECRET` | Match `NEXTAUTH_SECRET` (crucial for Auth.js/NextAuth v5 beta). |
    | `AUTH_TRUST_HOST` | Set to `true` (resolves authentication callbacks across dynamic domain redirects). |
