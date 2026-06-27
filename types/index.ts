@@ -10,8 +10,8 @@ export interface VideoType {
   title: string;
   description: string;
   slug: string;
-  cloudinaryId: string;
-  cloudinaryUrl: string;
+  streamId: string;
+  streamUrl: string;
   hlsUrl: string;
   thumbnailUrl: string;
   posterUrl: string;
@@ -27,15 +27,6 @@ export interface VideoType {
   updatedAt: Date;
 }
 
-export interface UserType {
-  id: string;
-  email: string;
-  name: string;
-  role: "USER" | "ADMIN";
-  avatar: string | null;
-  createdAt: Date;
-}
-
 export interface WatchHistoryType {
   id: string;
   userId: string;
@@ -45,42 +36,6 @@ export interface WatchHistoryType {
   completed: boolean;
   lastWatched: Date;
   video?: VideoType;
-}
-
-export interface MyListType {
-  id: string;
-  userId: string;
-  videoId: string;
-  addedAt: Date;
-  video?: VideoType;
-}
-
-// -------------------------------------------
-// API response types
-// -------------------------------------------
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
-}
-
-// -------------------------------------------
-// Video row types for homepage
-// -------------------------------------------
-export interface VideoRowData {
-  title: string;
-  slug: string;
-  videos: VideoType[];
-  type?: "default" | "continue-watching" | "featured";
 }
 
 // -------------------------------------------
@@ -94,30 +49,6 @@ export interface UploadProgress {
   videoId?: string;
 }
 
-export interface CloudinaryUploadResult {
-  public_id: string;
-  secure_url: string;
-  duration: number;
-  width: number;
-  height: number;
-  format: string;
-  resource_type: string;
-  eager?: Array<{
-    secure_url: string;
-    url: string;
-    transformation: string;
-  }>;
-}
-
-// -------------------------------------------
-// Search types
-// -------------------------------------------
-export interface SearchResult {
-  videos: VideoType[];
-  query: string;
-  total: number;
-}
-
 // -------------------------------------------
 // Category type
 // -------------------------------------------
@@ -127,45 +58,4 @@ export interface CategoryType {
   description: string;
   keywords: string[];
   emoji: string;
-}
-
-// -------------------------------------------
-// Player types
-// -------------------------------------------
-export interface PlayerState {
-  isPlaying: boolean;
-  isMuted: boolean;
-  isFullscreen: boolean;
-  isPiP: boolean;
-  currentTime: number;
-  duration: number;
-  volume: number;
-  quality: string;
-  isLoading: boolean;
-}
-
-// -------------------------------------------
-// Auth types
-// -------------------------------------------
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      email?: string | null;
-      name?: string | null;
-      role: "USER" | "ADMIN";
-    };
-  }
-
-  interface User {
-    id: string;
-    role?: "USER" | "ADMIN";
-  }
-}
-
-declare module "@auth/core/jwt" {
-  interface JWT {
-    id?: string;
-    role?: "USER" | "ADMIN";
-  }
 }

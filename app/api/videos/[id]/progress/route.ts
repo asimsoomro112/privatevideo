@@ -58,7 +58,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: history });
   } catch (error: unknown) {
-    console.error("❌ Progress saving error:", error);
+    console.error("Progress saving error:", error);
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

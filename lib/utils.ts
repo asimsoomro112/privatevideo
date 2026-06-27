@@ -78,17 +78,6 @@ export function slugify(text: string): string {
 }
 
 /**
- * Clean filename for use as a video title
- */
-export function cleanFilename(filename: string): string {
-  return filename
-    .replace(/\.[^/.]+$/, "") // Remove extension
-    .replace(/[-_]/g, " ") // Replace dashes/underscores with spaces
-    .replace(/\b\w/g, (c) => c.toUpperCase()) // Title case
-    .trim();
-}
-
-/**
  * Calculate watch progress percentage
  */
 export function getProgressPercentage(
@@ -109,15 +98,8 @@ export function formatViews(views: number): string {
 }
 
 /**
- * Generate a random match score (for demo/seed purposes)
+ * Generate a varied match score for uploaded videos.
  */
 export function randomMatchScore(): number {
   return Math.floor(Math.random() * 30) + 70; // 70-100
-}
-
-/**
- * Delay helper for animations
- */
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

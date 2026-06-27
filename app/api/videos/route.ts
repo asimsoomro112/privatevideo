@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, data: videos });
   } catch (error: unknown) {
-    console.error("❌ GET /api/videos error:", error);
+    console.error("GET /api/videos error:", error);
     return NextResponse.json(
       { success: false, error: getErrorMessage(error, "Failed to fetch videos") },
       { status: 500 }

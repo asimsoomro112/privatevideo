@@ -311,7 +311,7 @@ export default function UploadPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-text-primary">Upload Videos</h1>
         <p className="text-text-muted text-sm mt-1">
-          Upload real video files to Cloudinary with HLS playback, thumbnails,
+          Upload real video files to Bunny Stream with HLS playback, thumbnails,
           and database metadata.
         </p>
       </div>
@@ -420,7 +420,7 @@ export default function UploadPage() {
                         )}
                       >
                         {upload.status === "processing"
-                          ? "Cloudinary processing..."
+                          ? "Bunny Stream processing..."
                           : upload.status === "uploading"
                             ? `${upload.progress}%`
                             : upload.status === "complete"
@@ -732,8 +732,8 @@ export default function UploadPage() {
           </div>
 
           <div className="mt-5 rounded-lg border border-glass-border bg-bg-tertiary/60 p-3 text-xs leading-relaxed text-text-muted">
-            Uploads are saved to your configured Cloudinary folder, then stored
-            in SQLite with HLS, poster, thumbnail, preview, tags, and categories.
+            Uploads are saved to your Bunny Stream library, then stored in the
+            database with HLS, poster, thumbnail, tags, and categories.
           </div>
         </aside>
       </div>

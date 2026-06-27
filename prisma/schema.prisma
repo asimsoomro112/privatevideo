@@ -45,9 +45,9 @@ model Video {
   description     String    @default("")
   slug            String    @unique
 
-  // Cloudinary fields
-  cloudinaryId    String    @unique
-  cloudinaryUrl   String
+  // Bunny Stream storage. Column maps preserve older deployed databases.
+  streamId        String    @unique @map("cloudinaryId")
+  streamUrl       String    @map("cloudinaryUrl")
   hlsUrl          String
   thumbnailUrl    String
   posterUrl       String

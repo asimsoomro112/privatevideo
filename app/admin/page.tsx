@@ -4,6 +4,7 @@
 // Overview page with stats and recent uploads.
 
 import { prisma } from "@/lib/prisma";
+import { toClientVideo } from "@/lib/video-serializer";
 import { Film, Users, Eye, HardDrive } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -117,43 +118,47 @@ export default async function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-glass-border">
-                {recentVideos.map((video) => (
-                  <tr
-                    key={video.id}
-                    className="hover:bg-bg-tertiary/50 transition-colors"
-                  >
-                    <td className="px-5 py-3.5">
-                      <p className="text-sm font-medium text-text-primary truncate max-w-[200px]">
-                        {video.title}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex gap-1 flex-wrap">
-                        {video.categories.slice(0, 2).map((cat) => (
-                          <span
-                            key={cat}
-                            className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-muted"
-                          >
-                            {cat}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-text-secondary">
-                      {video.views}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`text-xs font-medium ${video.published ? "text-success" : "text-warning"}`}
-                      >
-                        {video.published ? "Published" : "Draft"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-text-muted">
-                      {new Date(video.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
+                {recentVideos.map((record) => {
+                  const video = toClientVideo(record);
+
+                  return (
+                    <tr
+                      key={video.id}
+                      className="hover:bg-bg-tertiary/50 transition-colors"
+                    >
+                      <td className="px-5 py-3.5">
+                        <p className="text-sm font-medium text-text-primary truncate max-w-[200px]">
+                          {video.title}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex gap-1 flex-wrap">
+                          {video.categories.slice(0, 2).map((cat) => (
+                            <span
+                              key={cat}
+                              className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-muted"
+                            >
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-text-secondary">
+                        {video.views}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`text-xs font-medium ${video.published ? "text-success" : "text-warning"}`}
+                        >
+                          {video.published ? "Published" : "Draft"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-text-muted">
+                        {new Date(video.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

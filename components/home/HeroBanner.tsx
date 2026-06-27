@@ -93,7 +93,7 @@ export default function HeroBanner({ video }: HeroBannerProps) {
         {(video.trailerUrl || video.hlsUrl) && (
           <video
             ref={videoRef}
-            src={video.trailerUrl || video.cloudinaryUrl}
+            src={video.trailerUrl || video.streamUrl}
             autoPlay
             loop
             muted={isMuted}

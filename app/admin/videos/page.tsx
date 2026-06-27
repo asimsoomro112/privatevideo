@@ -29,7 +29,7 @@ export default async function AdminVideosPage() {
       id: video.id,
       title: video.title,
       description: video.description,
-      cloudinaryId: video.cloudinaryId,
+      streamId: video.streamId,
       thumbnailUrl: video.thumbnailUrl,
       duration: video.duration,
       categories: video.categories,
@@ -50,7 +50,7 @@ export default async function AdminVideosPage() {
             All Videos ({videos.length})
           </h1>
           <p className="text-text-muted text-sm mt-1">
-            Manage, edit, publish, feature, and delete your real Cloudinary
+            Manage, edit, publish, feature, and delete your real Bunny Stream
             content.
           </p>
         </div>

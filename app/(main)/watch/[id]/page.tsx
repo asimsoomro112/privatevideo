@@ -81,8 +81,8 @@ export default async function WatchPage({
     <div className="min-h-screen bg-bg-primary">
       <div className="w-full aspect-video min-h-[220px] max-h-[calc(100svh-3.5rem)] bg-black md:max-h-[calc(100svh-68px)]">
         <VideoPlayer
-          hlsUrl={video.hlsUrl || video.cloudinaryUrl}
-          fallbackUrl={video.cloudinaryUrl}
+          hlsUrl={video.hlsUrl || video.streamUrl}
+          fallbackUrl={video.streamUrl}
           posterUrl={video.posterUrl || video.thumbnailUrl}
           title={video.title}
           videoId={video.id}

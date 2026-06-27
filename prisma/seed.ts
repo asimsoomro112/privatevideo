@@ -1,7 +1,7 @@
 // ===========================================
-// PrivateVideos - Database Seed Script (SQLite compatible)
+// PrivateVideos - Database Seed Script
 // ===========================================
-// Sets up the private access profile only. No demo videos are created.
+// Sets up the shared local profile only. No demo videos are created.
 // Run with: npm run db:seed or npx tsx prisma/seed.ts
 
 import { PrismaClient } from "@prisma/client";
@@ -14,17 +14,17 @@ async function main() {
   await prisma.user.upsert({
     where: { email: "private@privatevideos.local" },
     update: {
-      name: "My Love",
+      name: "Private Viewer",
       role: "ADMIN",
     },
     create: {
       email: "private@privatevideos.local",
-      name: "My Love",
-      hashedPassword: "single-password-auth",
+      name: "Private Viewer",
+      hashedPassword: "public-profile",
       role: "ADMIN",
     },
   });
-  console.log("Private access profile is ready.");
+  console.log("Shared profile is ready.");
 
   const removedDemoUsers = await prisma.user.deleteMany({
     where: {
@@ -45,8 +45,8 @@ async function main() {
   const removedDemoVideos = await prisma.video.deleteMany({
     where: {
       OR: [
-        { cloudinaryId: { startsWith: "streamvault/seed/" } },
-        { cloudinaryUrl: { contains: "res.cloudinary.com/demo/" } },
+        { streamId: { startsWith: "streamvault/seed/" } },
+        { streamUrl: { contains: "res.cloudinary.com/demo/" } },
       ],
     },
   });

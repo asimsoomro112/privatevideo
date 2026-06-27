@@ -1,19 +1,17 @@
 # PrivateVideos
 
-A private, premium, mobile-first video streaming app built with Next.js 15, TypeScript, Tailwind CSS, Auth.js/NextAuth credentials, Prisma + PostgreSQL/Supabase, Zustand, framer-motion, hls.js, and Bunny Stream.
+A private, premium, mobile-first video streaming app built with Next.js 15, TypeScript, Tailwind CSS, Prisma + PostgreSQL/Supabase, Zustand, framer-motion, hls.js, and Bunny Stream.
 
 ## Features
 
-- Single-password private login. No public content routes.
+- Direct public browsing with no login wall.
 - Hidden admin entry at `/vault-admin`; normal UI does not show admin links.
 - Bunny Stream video uploads with HLS playback, thumbnails, and MP4 fallback.
-- Custom hls.js player with resume progress, PiP, fullscreen, theater mode, speed control, and private pause/end messages.
+- Custom hls.js player with resume progress, PiP, fullscreen, theater mode, speed control, quality switching, and mobile gestures.
 - Long-form homepage with Continue Watching, Trending, Mood-Based Picks, New Additions, category rows, search, and My List.
 - TikTok-style Shorts page for videos under 2 minutes.
 - Mobile-first bottom navigation and touch-friendly cards/feed controls.
 - Real admin upload with Bunny Stream processing, metadata controls, edit/delete, publish/draft, featured toggles, and bulk upload CLI.
-- Romantic message button with 50+ configurable English/Roman Urdu lines.
-- shadcn-style local UI primitives in `components/ui`.
 
 ## Environment
 
@@ -26,11 +24,8 @@ cp .env.example .env
 Required:
 
 ```env
-DATABASE_URL="file:./dev.db"
-AUTH_SECRET="replace-with-a-long-random-secret"
-NEXTAUTH_URL="http://localhost:3000"
-AUTH_TRUST_HOST="true"
-PRIVATE_ACCESS_PASSWORD="change-this-password"
+DATABASE_URL="postgresql://postgres.your-project-ref:your-password@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://postgres:your-password@db.your-project-ref.supabase.co:5432/postgres"
 BUNNY_STREAM_LIBRARY_ID="your-bunny-stream-library-id"
 BUNNY_STREAM_ACCESS_KEY="your-bunny-stream-api-key"
 BUNNY_STREAM_HOSTNAME="your-bunny-cdn-hostname.b-cdn.net"
@@ -50,17 +45,17 @@ Open `http://localhost:3000`.
 
 `npm run db:seed` creates the private user only and removes old PrivateVideos demo rows. It does not add fake videos.
 
-## Private Access
+## Routes
 
-- User login: `/login`
 - Main app: `/`
 - Shorts: `/shorts`
+- Long videos: `/longs`
 - Hidden admin entry: `/vault-admin`
 - Admin dashboard after unlock: `/admin`
 - Upload: `/admin/upload`
 - Manage videos: `/admin/videos`
 
-The admin API is blocked until `/vault-admin` has been opened after login.
+Main video browsing opens directly. Admin pages and write APIs are blocked until `/vault-admin` has been opened, which sets a private admin cookie.
 
 ## Bunny Stream Setup
 
@@ -133,10 +128,6 @@ npx prisma db push
    | :--- | :--- |
    | `DATABASE_URL` | Supabase Transaction Pooler / pooler connection string, usually port `6543`. |
    | `DIRECT_URL` | Supabase direct connection string, usually port `5432`, used by Prisma schema operations. |
-   | `AUTH_SECRET` | A secure, random 32-character secret (generate with `openssl rand -base64 32`). |
-   | `AUTH_TRUST_HOST` | Set to `true` (resolves authentication callbacks across dynamic domain redirects). |
-   | `NEXTAUTH_URL` | Canonical URL of your deployment, e.g. `https://privatevideo-two.vercel.app`. Do not leave this as `http://localhost:3000` in Vercel. |
-   | `PRIVATE_ACCESS_PASSWORD` | The secret password users input to access your private cinema. |
    | `BUNNY_STREAM_LIBRARY_ID` | Your Bunny Stream Library ID. |
    | `BUNNY_STREAM_ACCESS_KEY` | Your Bunny Stream API key. |
    | `BUNNY_STREAM_HOSTNAME` | Your Bunny CDN hostname. |

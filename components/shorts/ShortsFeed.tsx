@@ -202,7 +202,7 @@ function ShortVideoItem({
   const removeFromMyList = useAppStore((state) => state.removeFromMyList);
   const isInMyList = useAppStore((state) => state.myList.includes(video.id));
 
-  const sourceUrl = video.hlsUrl || video.cloudinaryUrl;
+  const sourceUrl = video.hlsUrl || video.streamUrl;
 
   // ---- HLS / source setup (unchanged streaming logic, network-aware buffering) ----
   useEffect(() => {
@@ -243,17 +243,17 @@ function ShortVideoItem({
             hls.on(Hls.Events.MANIFEST_PARSED, () => setIsLoading(false));
             hls.on(Hls.Events.ERROR, (_event, data) => {
               if (data.fatal) {
-                videoElement.src = video.cloudinaryUrl;
+                videoElement.src = video.streamUrl;
                 setHasError(false);
               }
             });
           } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
             videoElement.src = sourceUrl;
           } else {
-            videoElement.src = video.cloudinaryUrl;
+            videoElement.src = video.streamUrl;
           }
         } catch {
-          videoElement.src = video.cloudinaryUrl;
+          videoElement.src = video.streamUrl;
         }
       } else {
         videoElement.src = sourceUrl;
@@ -266,7 +266,7 @@ function ShortVideoItem({
       cancelled = true;
       hls?.destroy();
     };
-  }, [shouldLoad, sourceUrl, video.cloudinaryUrl]);
+  }, [shouldLoad, sourceUrl, video.streamUrl]);
 
   // ---- Active / mute sync ----
   useEffect(() => {

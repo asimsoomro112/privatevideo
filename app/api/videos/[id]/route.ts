@@ -8,7 +8,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteBunnyVideo, isBunnyVideoId } from "@/lib/bunny";
-import { deleteVideoFromCloudinary } from "@/lib/cloudinary";
 import { getErrorMessage } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 
@@ -145,12 +144,8 @@ export async function DELETE(
     }
 
     try {
-      if (video.cloudinaryId) {
-        if (isBunnyVideoId(video.cloudinaryId)) {
-          await deleteBunnyVideo(video.cloudinaryId);
-        } else {
-          await deleteVideoFromCloudinary(video.cloudinaryId);
-        }
+      if (video.streamId && isBunnyVideoId(video.streamId)) {
+        await deleteBunnyVideo(video.streamId);
       }
     } catch (storageError) {
       console.warn("Failed to delete asset from provider storage:", storageError);
@@ -162,7 +157,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Video deleted successfully from database and provider storage",
+      message: "Video deleted successfully",
     });
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });

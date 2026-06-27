@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: entry });
   } catch (error: unknown) {
-    console.error("❌ Add to watchlist error:", error);
+    console.error("Add to watchlist error:", error);
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
@@ -89,7 +89,7 @@ export async function DELETE(request: Request) {
       message: "Video removed from watchlist successfully",
     });
   } catch (error: unknown) {
-    console.error("❌ Remove from watchlist error:", error);
+    console.error("Remove from watchlist error:", error);
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

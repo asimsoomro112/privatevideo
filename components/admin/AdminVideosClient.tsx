@@ -24,7 +24,7 @@ export type AdminVideo = {
   id: string;
   title: string;
   description: string;
-  cloudinaryId: string;
+  streamId: string;
   thumbnailUrl: string;
   duration: number;
   categories: string[];
@@ -190,7 +190,7 @@ export default function AdminVideosClient({
 
   const handleDelete = async (video: AdminVideo) => {
     const confirmed = window.confirm(
-      `Delete "${video.title}" from the database and Cloudinary?`
+      `Delete "${video.title}" from the database and Bunny Stream?`
     );
     if (!confirmed) return;
 

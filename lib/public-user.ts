@@ -1,7 +1,7 @@
 // ===========================================
 // PrivateVideos - Private Single-User Profile
 // ===========================================
-// User-scoped features share one private profile after password login.
+// User-scoped features share one local profile while public browsing stays open.
 
 import { prisma } from "@/lib/prisma";
 
@@ -11,13 +11,13 @@ export async function getPublicUser() {
   return prisma.user.upsert({
     where: { email: PUBLIC_USER_EMAIL },
     update: {
-      name: "My Love",
+      name: "Private Viewer",
       role: "ADMIN",
     },
     create: {
       email: PUBLIC_USER_EMAIL,
-      name: "My Love",
-      hashedPassword: "single-password-auth",
+      name: "Private Viewer",
+      hashedPassword: "public-profile",
       role: "ADMIN",
     },
     select: {

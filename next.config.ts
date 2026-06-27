@@ -4,14 +4,9 @@ const nextConfig: NextConfig = {
   // Enable React strict mode for better development experience
   reactStrictMode: true,
 
-  // Image optimization - allow Cloudinary and placeholder domains
+  // Image optimization for Bunny Stream thumbnails and legacy external posters.
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        pathname: "/**",
-      },
       {
         protocol: "https",
         hostname: process.env.BUNNY_STREAM_HOSTNAME || "vz-a108884a-b18.b-cdn.net",
@@ -43,7 +38,6 @@ const nextConfig: NextConfig = {
       "lucide-react",
       "framer-motion",
       "gsap",
-      "@tanstack/react-query",
     ],
   },
 };
