@@ -1,19 +1,19 @@
 // ===========================================
 // PrivateVideos - Homepage
 // ===========================================
-// Netflix-style homepage with hero banner, continue watching,
-// and multiple categorized video rows.
+// Hero, quick filters, focused rows, and the full library grid.
 
+import Link from "next/link";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { getPublicUser } from "@/lib/public-user";
-import { CATEGORIES } from "@/lib/categories";
 import { toClientVideo, toClientWatchHistory } from "@/lib/video-serializer";
-import { isLongFormVideo } from "@/lib/video-duration";
+import { isLongFormVideo, isShortVideo } from "@/lib/video-duration";
 import { cn } from "@/lib/utils";
 import HeroBanner from "@/components/home/HeroBanner";
 import MoodSelector from "@/components/home/MoodSelector";
+import VideoGrid from "@/components/home/VideoGrid";
 import VideoRow from "@/components/home/VideoRow";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -24,25 +24,23 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const publicUser = await getPublicUser();
 
-  // Fetch featured video for hero banner
   const featuredVideoRecord = await prisma.video.findFirst({
     where: { featured: true, published: true },
     orderBy: { createdAt: "desc" },
   });
 
-  // Fetch all published videos
   const allVideoRecords = await prisma.video.findMany({
     where: { published: true },
     orderBy: { createdAt: "desc" },
-    take: 100,
   });
+
   const featuredVideo = featuredVideoRecord
     ? toClientVideo(featuredVideoRecord)
     : null;
   const allVideos = allVideoRecords.map(toClientVideo);
   const longVideos = allVideos.filter(isLongFormVideo);
+  const shortVideos = allVideos.filter(isShortVideo);
 
-  // Fetch continue watching for the shared public profile
   const watchHistoryRecords = await prisma.watchHistory.findMany({
     where: {
       userId: publicUser.id,
@@ -54,46 +52,21 @@ export default async function HomePage() {
     take: 20,
   });
   const watchHistory = watchHistoryRecords.map(toClientWatchHistory);
-  const longWatchHistory = watchHistory.filter(
-    (history) => history.video && isLongFormVideo(history.video)
-  );
-  const continueWatchingVideos = longWatchHistory.flatMap((history) =>
+  const continueWatchingVideos = watchHistory.flatMap((history) =>
     history.video ? [history.video] : []
   );
 
-  // Build category rows from available videos
-  const categoryRows = CATEGORIES.map((category) => {
-    const categoryVideos = longVideos.filter((video) =>
-      video.categories.includes(category.slug)
-    );
-    return {
-      title: category.name,
-      emoji: category.emoji,
-      slug: category.slug,
-      videos: categoryVideos,
-    };
-  }).filter((row) => row.videos.length > 0);
-
-  // Trending: top viewed videos
-  const trendingVideos = [...longVideos]
-    .sort((a, b) => b.views - a.views)
-    .slice(0, 20);
-
-  // Recently added
-  const recentVideos = longVideos.slice(0, 20);
-
-  // Use first video if no featured video set
+  const latestLongVideos = longVideos.slice(0, 24);
+  const latestShortVideos = shortVideos.slice(0, 24);
   const heroVideo =
     featuredVideo && isLongFormVideo(featuredVideo)
       ? featuredVideo
-      : longVideos[0];
+      : longVideos[0] || allVideos[0];
 
   return (
     <div className="animate-fade-in">
-      {/* Hero Banner */}
       {heroVideo && <HeroBanner video={heroVideo} />}
 
-      {/* Video Rows - overlap hero slightly */}
       <div
         className={cn(
           "relative z-10 space-y-2",
@@ -102,54 +75,53 @@ export default async function HomePage() {
       >
         <MoodSelector />
 
-        {/* Continue Watching */}
-        {longWatchHistory.length > 0 && (
+        <div className="container-fluid mb-6 grid grid-cols-2 gap-3 md:flex md:flex-wrap">
+          <Link
+            href="/longs"
+            className="rounded-lg border border-glass-border bg-bg-secondary/80 px-4 py-3 text-center text-sm font-semibold text-text-primary transition hover:border-accent hover:text-white"
+          >
+            Long Videos
+            <span className="ml-2 text-text-muted">{longVideos.length}</span>
+          </Link>
+          <Link
+            href="/shorts"
+            className="rounded-lg border border-glass-border bg-bg-secondary/80 px-4 py-3 text-center text-sm font-semibold text-text-primary transition hover:border-accent hover:text-white"
+          >
+            Shorts
+            <span className="ml-2 text-text-muted">{shortVideos.length}</span>
+          </Link>
+        </div>
+
+        {watchHistory.length > 0 && (
           <VideoRow
             title="Continue Watching"
-            emoji="▶️"
             videos={continueWatchingVideos}
-            watchHistory={longWatchHistory}
+            watchHistory={watchHistory}
             showProgress
           />
         )}
 
-        {/* Trending Now */}
-        {trendingVideos.length > 0 && (
-          <VideoRow
-            title="Trending Now"
-            emoji="🔥"
-            videos={trendingVideos}
-          />
+        {latestLongVideos.length > 0 && (
+          <VideoRow title="Long Videos" videos={latestLongVideos} />
         )}
 
-        {/* Recently Added */}
-        {recentVideos.length > 0 && (
-          <VideoRow
-            title="Recently Added"
-            emoji="✨"
-            videos={recentVideos}
-          />
+        {latestShortVideos.length > 0 && (
+          <VideoRow title="Shorts" videos={latestShortVideos} />
         )}
 
-        {/* Category Rows */}
-        {categoryRows.map((row) => (
-          <VideoRow
-            key={row.slug}
-            title={row.title}
-            emoji={row.emoji}
-            videos={row.videos}
-          />
-        ))}
+        <VideoGrid
+          title="All Videos"
+          description="Long videos and shorts together, newest first."
+          videos={allVideos}
+        />
 
-        {/* Empty state */}
-        {longVideos.length === 0 && (
+        {allVideos.length === 0 && (
           <div className="container-fluid py-32 text-center">
             <h2 className="text-2xl font-bold text-text-primary mb-2">
-              No long videos yet
+              No videos yet
             </h2>
             <p className="text-text-secondary">
-              Videos 2 minutes or longer will appear here. Short clips live on
-              the Shorts page.
+              Upload videos from the admin panel and they will appear here.
             </p>
           </div>
         )}

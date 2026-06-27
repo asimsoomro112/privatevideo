@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookmarkPlus, Clapperboard, Home, Search } from "lucide-react";
+import { BookmarkPlus, Clapperboard, Film, Home, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function MobileNav() {
@@ -17,6 +17,7 @@ export default function MobileNav() {
   const links = [
     { href: "/", label: "Home", icon: Home },
     { href: "/shorts", label: "Shorts", icon: Clapperboard },
+    { href: "/longs", label: "Longs", icon: Film },
     { href: "/search", label: "Search", icon: Search },
     { href: "/my-list", label: "My List", icon: BookmarkPlus },
   ];
@@ -25,7 +26,7 @@ export default function MobileNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav">
       {/* Glassmorphism background */}
       <div className="mx-3 mb-2 rounded-2xl bg-bg-secondary/95 backdrop-blur-2xl border border-glass-border shadow-2xl shadow-black/50">
-        <div className="grid grid-cols-4 items-center py-2 px-1">
+        <div className="grid grid-cols-5 items-center py-2 px-1">
           {links.map((link) => {
             const isActive =
               link.href === "/"
