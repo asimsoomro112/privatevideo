@@ -48,6 +48,14 @@ const CONTROLS_AUTO_HIDE_MS = 3000;
 const PROGRESS_SAVE_INTERVAL_MS = 5000;
 const SCROLL_CANCEL_DISTANCE_PX = 14;
 const SEEK_FLASH_MS = 450;
+const SCRUB_COMMIT_SAVE_MS = 200;
+const VOLUME_SWIPE_PIXELS = 180;
+const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2];
+
+interface QualityOption {
+  index: number;
+  label: string;
+}
 
 function isCoarsePointer(): boolean {
   if (typeof window === "undefined") return false;
@@ -90,15 +98,23 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const hlsRef = useRef<import("hls.js").default | null>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const singleTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seekFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrubFrameRef = useRef<number | null>(null);
+  const volumeHudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastProgressSaveRef = useRef(0);
   const pendingProgressRef = useRef(initialProgress);
   const wasHoldSpeedRef = useRef(false);
   const didStageMoveRef = useRef(false);
   const stagePointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const stageGestureModeRef = useRef<"seek" | "volume" | "move" | null>(null);
+  const stageStartVolumeRef = useRef(1);
+  const scrubWasPlayingRef = useRef(false);
+  const scrubPreviewTimeRef = useRef(0);
+  const isScrubbingRef = useRef(false);
   const lastTapRef = useRef<{
     time: number;
     x: number;
@@ -124,8 +140,15 @@ export default function VideoPlayer({
   const [momentMessage, setMomentMessage] = useState("");
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isHoldSpeeding, setIsHoldSpeeding] = useState(false);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
   const [seekFlash, setSeekFlash] = useState<"left" | "right" | null>(null);
   const [hasError, setHasError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [qualityOptions, setQualityOptions] = useState<QualityOption[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState(-1);
+  const [showVolumeHud, setShowVolumeHud] = useState(false);
 
   useEffect(() => {
     setIsTouchDevice(isCoarsePointer());
@@ -154,6 +177,12 @@ export default function VideoPlayer({
     }
   }, []);
 
+  const retryPlayback = useCallback(() => {
+    setHasError(false);
+    setIsLoading(true);
+    setReloadKey((value) => value + 1);
+  }, []);
+
   // Initialize HLS.js for adaptive streaming
   useEffect(() => {
     const video = videoRef.current;
@@ -164,11 +193,17 @@ export default function VideoPlayer({
 
     setIsLoading(true);
     setHasError(false);
+    setQualityOptions([]);
+    setSelectedQuality(-1);
+    hlsRef.current = null;
 
     const fallbackToDirectPlayback = () => {
       if (cancelled || !video) return;
       hls?.destroy();
       hls = null;
+      hlsRef.current = null;
+      setQualityOptions([]);
+      setSelectedQuality(-1);
       setHasError(false);
       setIsLoading(true);
 
@@ -193,13 +228,30 @@ export default function VideoPlayer({
               enableWorker: true,
               startLevel: speedHint === "slow" ? 0 : -1, // Auto quality unless connection is slow
             });
+            hlsRef.current = hls;
             hls.loadSource(hlsUrl);
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
               setIsLoading(false);
+              setQualityOptions(
+                hls?.levels.map((level, index) => ({
+                  index,
+                  label: level.height
+                    ? `${level.height}p`
+                    : `${Math.round((level.bitrate || 0) / 1000)} kbps`,
+                })) || []
+              );
               if (initialProgress > 0) {
                 video.currentTime = initialProgress;
+              }
+            });
+
+            hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+              if (hls?.autoLevelEnabled) {
+                setSelectedQuality(-1);
+              } else {
+                setSelectedQuality(data.level);
               }
             });
 
@@ -228,8 +280,9 @@ export default function VideoPlayer({
       cancelled = true;
       video.onerror = null;
       hls?.destroy();
+      if (hlsRef.current === hls) hlsRef.current = null;
     };
-  }, [directPlaybackUrl, hlsUrl, initialProgress]);
+  }, [directPlaybackUrl, hlsUrl, initialProgress, reloadKey]);
 
   const persistProgress = useCallback(
     (time: number, keepalive = false) => {
@@ -355,14 +408,36 @@ export default function VideoPlayer({
     }
   }, [isPlaying, showControlsTemporarily]);
 
+  useEffect(() => {
+    if (!showControls) setShowSettings(false);
+  }, [showControls]);
+
   const cycleSpeed = useCallback(() => {
-    const speeds = [0.75, 1, 1.25, 1.5, 2];
-    const nextSpeed = speeds[(speeds.indexOf(playbackRate) + 1) % speeds.length];
+    const nextSpeed =
+      SPEED_OPTIONS[
+        (SPEED_OPTIONS.indexOf(playbackRate) + 1) % SPEED_OPTIONS.length
+      ];
     setPlaybackRate(nextSpeed);
     if (videoRef.current) {
       videoRef.current.playbackRate = nextSpeed;
     }
   }, [playbackRate]);
+
+  const setPlaybackSpeed = useCallback((speed: number) => {
+    setPlaybackRate(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  }, []);
+
+  const selectQuality = useCallback((level: number) => {
+    const hls = hlsRef.current;
+    if (!hls) return;
+
+    hls.currentLevel = level;
+    hls.nextLevel = level;
+    setSelectedQuality(level);
+  }, []);
 
   // Volume
   const toggleMute = useCallback(() => {
@@ -380,6 +455,25 @@ export default function VideoPlayer({
 
     setVolume(video.volume);
     setIsMuted(video.muted || video.volume === 0);
+  }, []);
+
+  const setVideoVolume = useCallback((nextVolume: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const clampedVolume = Math.max(0, Math.min(1, nextVolume));
+    video.volume = clampedVolume;
+    video.muted = clampedVolume === 0;
+    setVolume(clampedVolume);
+    setIsMuted(video.muted);
+    setShowVolumeHud(true);
+
+    if (volumeHudTimerRef.current) {
+      clearTimeout(volumeHudTimerRef.current);
+    }
+    volumeHudTimerRef.current = setTimeout(() => {
+      setShowVolumeHud(false);
+    }, 650);
   }, []);
 
   // Fullscreen
@@ -447,26 +541,71 @@ export default function VideoPlayer({
     }
   }, []);
 
-  const seekToClientX = useCallback(
-    (clientX: number) => {
+  const getSeekTimeFromClientX = useCallback(
+    (clientX: number, target?: HTMLElement | null) => {
       const video = videoRef.current;
-      const bar = progressRef.current;
+      const bar = target || progressRef.current;
       const mediaDuration = duration || video?.duration || 0;
 
-      if (!video || !bar || mediaDuration <= 0) return;
+      if (!video || !bar || mediaDuration <= 0) return null;
 
       const rect = bar.getBoundingClientRect();
       const percent = Math.max(
         0,
         Math.min(1, (clientX - rect.left) / rect.width)
       );
-      const nextTime = percent * mediaDuration;
+      return percent * mediaDuration;
+    },
+    [duration]
+  );
 
+  const previewSeekToClientX = useCallback(
+    (clientX: number, target?: HTMLElement | null) => {
+      const nextTime = getSeekTimeFromClientX(clientX, target);
+      if (nextTime === null) return;
+
+      scrubPreviewTimeRef.current = nextTime;
+      if (scrubFrameRef.current !== null) return;
+
+      scrubFrameRef.current = requestAnimationFrame(() => {
+        scrubFrameRef.current = null;
+        setScrubPreviewTime(scrubPreviewTimeRef.current);
+      });
+    },
+    [getSeekTimeFromClientX]
+  );
+
+  const beginScrub = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return false;
+
+    scrubWasPlayingRef.current = !video.paused;
+    scrubPreviewTimeRef.current = video.currentTime;
+    isScrubbingRef.current = true;
+    setScrubPreviewTime(video.currentTime);
+    setIsScrubbing(true);
+    video.pause();
+    return true;
+  }, []);
+
+  const commitScrub = useCallback(
+    (resumeAfterCommit = scrubWasPlayingRef.current) => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const nextTime = scrubPreviewTimeRef.current;
       video.currentTime = nextTime;
       setCurrentTime(nextTime);
-      saveProgress(nextTime);
+      setScrubPreviewTime(null);
+      isScrubbingRef.current = false;
+      setIsScrubbing(false);
+      saveProgress(nextTime, { force: true, keepalive: true });
+
+      window.setTimeout(() => {
+        if (resumeAfterCommit) void safePlay();
+      }, SCRUB_COMMIT_SAVE_MS);
     },
-    [duration, saveProgress]
+    [safePlay, saveProgress]
   );
 
   const handleSeekPointerDown = useCallback(
@@ -474,18 +613,20 @@ export default function VideoPlayer({
       event.stopPropagation();
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
-      seekToClientX(event.clientX);
+      if (beginScrub()) {
+        previewSeekToClientX(event.clientX);
+      }
     },
-    [seekToClientX]
+    [beginScrub, previewSeekToClientX]
   );
 
   const handleSeekPointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       if (event.buttons !== 1) return;
       event.stopPropagation();
-      seekToClientX(event.clientX);
+      previewSeekToClientX(event.clientX);
     },
-    [seekToClientX]
+    [previewSeekToClientX]
   );
 
   const handleSeekPointerEnd = useCallback(
@@ -494,8 +635,9 @@ export default function VideoPlayer({
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
+      if (isScrubbingRef.current) commitScrub();
     },
-    []
+    [commitScrub]
   );
 
   const jumpBy = useCallback(
@@ -530,6 +672,8 @@ export default function VideoPlayer({
       if (!isTouchDevice) return;
 
       stagePointerStartRef.current = { x: event.clientX, y: event.clientY };
+      stageGestureModeRef.current = null;
+      stageStartVolumeRef.current = videoRef.current?.volume ?? volume;
       didStageMoveRef.current = false;
 
       holdTimeoutRef.current = setTimeout(() => {
@@ -541,7 +685,7 @@ export default function VideoPlayer({
         vibrate(20);
       }, HOLD_TO_SPEED_DELAY_MS);
     },
-    [isTouchDevice]
+    [isTouchDevice, volume]
   );
 
   const handleStagePointerMove = useCallback(
@@ -553,6 +697,7 @@ export default function VideoPlayer({
 
       const deltaX = Math.abs(event.clientX - start.x);
       const deltaY = Math.abs(event.clientY - start.y);
+      const signedDeltaY = event.clientY - start.y;
       if (
         deltaX < SCROLL_CANCEL_DISTANCE_PX &&
         deltaY < SCROLL_CANCEL_DISTANCE_PX
@@ -565,8 +710,47 @@ export default function VideoPlayer({
         clearTimeout(holdTimeoutRef.current);
         holdTimeoutRef.current = null;
       }
+
+      const container = containerRef.current;
+      const rect = container?.getBoundingClientRect();
+
+      if (!stageGestureModeRef.current) {
+        const startedOnRightSide =
+          rect && start.x - rect.left > rect.width * 0.58;
+
+        if (startedOnRightSide && deltaY > deltaX * 1.1) {
+          stageGestureModeRef.current = "volume";
+          vibrate(8);
+        } else if (deltaX > deltaY * 1.1) {
+          stageGestureModeRef.current = "seek";
+          beginScrub();
+          vibrate(8);
+        } else {
+          stageGestureModeRef.current = "move";
+        }
+      }
+
+      if (stageGestureModeRef.current === "volume") {
+        const nextVolume =
+          stageStartVolumeRef.current - signedDeltaY / VOLUME_SWIPE_PIXELS;
+        setVideoVolume(nextVolume);
+        showControlsTemporarily();
+        return;
+      }
+
+      if (stageGestureModeRef.current === "seek") {
+        previewSeekToClientX(event.clientX, container);
+        showControlsTemporarily();
+        return;
+      }
     },
-    [isTouchDevice]
+    [
+      beginScrub,
+      isTouchDevice,
+      previewSeekToClientX,
+      setVideoVolume,
+      showControlsTemporarily,
+    ]
   );
 
   const handleStagePointerUp = useCallback(
@@ -579,9 +763,26 @@ export default function VideoPlayer({
       }
 
       const video = videoRef.current;
+      const gestureMode = stageGestureModeRef.current;
+
+      if (gestureMode === "seek") {
+        commitScrub(scrubWasPlayingRef.current);
+        didStageMoveRef.current = false;
+        stageGestureModeRef.current = null;
+        stagePointerStartRef.current = null;
+        return;
+      }
+
+      if (gestureMode === "volume" || gestureMode === "move") {
+        didStageMoveRef.current = false;
+        stageGestureModeRef.current = null;
+        stagePointerStartRef.current = null;
+        return;
+      }
 
       if (didStageMoveRef.current) {
         didStageMoveRef.current = false;
+        stageGestureModeRef.current = null;
         stagePointerStartRef.current = null;
         return;
       }
@@ -591,6 +792,7 @@ export default function VideoPlayer({
         if (video) video.playbackRate = playbackRate;
         wasHoldSpeedRef.current = false;
         setIsHoldSpeeding(false);
+        stageGestureModeRef.current = null;
         stagePointerStartRef.current = null;
         return;
       }
@@ -650,9 +852,18 @@ export default function VideoPlayer({
         }
         singleTapTimeoutRef.current = null;
       }, DOUBLE_TAP_WINDOW_MS);
+      stageGestureModeRef.current = null;
       stagePointerStartRef.current = null;
     },
-    [isTouchDevice, jumpBy, playbackRate, showControls, showControlsTemporarily, togglePlay]
+    [
+      commitScrub,
+      isTouchDevice,
+      jumpBy,
+      playbackRate,
+      showControls,
+      showControlsTemporarily,
+      togglePlay,
+    ]
   );
 
   const handleStagePointerCancel = useCallback(() => {
@@ -665,7 +876,11 @@ export default function VideoPlayer({
     }
     wasHoldSpeedRef.current = false;
     didStageMoveRef.current = false;
+    stageGestureModeRef.current = null;
     stagePointerStartRef.current = null;
+    isScrubbingRef.current = false;
+    setIsScrubbing(false);
+    setScrubPreviewTime(null);
     setIsHoldSpeeding(false);
   }, [playbackRate]);
 
@@ -675,6 +890,8 @@ export default function VideoPlayer({
       if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
       if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
       if (seekFlashTimerRef.current) clearTimeout(seekFlashTimerRef.current);
+      if (volumeHudTimerRef.current) clearTimeout(volumeHudTimerRef.current);
+      if (scrubFrameRef.current !== null) cancelAnimationFrame(scrubFrameRef.current);
     };
   }, []);
 
@@ -712,17 +929,13 @@ export default function VideoPlayer({
         case "ArrowUp":
           if (videoRef.current) {
             const nextVolume = Math.min(1, videoRef.current.volume + 0.1);
-            videoRef.current.volume = nextVolume;
-            videoRef.current.muted = false;
-            syncVolumeState();
+            setVideoVolume(nextVolume);
           }
           break;
         case "ArrowDown":
           if (videoRef.current) {
             const nextVolume = Math.max(0, videoRef.current.volume - 0.1);
-            videoRef.current.volume = nextVolume;
-            videoRef.current.muted = nextVolume === 0;
-            syncVolumeState();
+            setVideoVolume(nextVolume);
           }
           break;
         case "Escape":
@@ -739,10 +952,14 @@ export default function VideoPlayer({
     toggleFullscreen,
     isFullscreen,
     jumpBy,
-    syncVolumeState,
+    setVideoVolume,
   ]);
 
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const displayTime =
+    isScrubbing && scrubPreviewTime !== null ? scrubPreviewTime : currentTime;
+  const progressPercent = duration > 0 ? (displayTime / duration) * 100 : 0;
+  const bufferedScale = Math.min(1, Math.max(0, bufferedPercent / 100));
+  const progressScale = Math.min(1, Math.max(0, progressPercent / 100));
 
   const posterSrc = useMemo(() => posterUrl, [posterUrl]);
 
@@ -786,7 +1003,7 @@ export default function VideoPlayer({
           if (video) {
             saveProgress(video.currentTime, { force: true, keepalive: true });
           }
-          if (!videoRef.current?.ended) {
+          if (!videoRef.current?.ended && !isScrubbingRef.current) {
             setMomentMessage(getRandomRomanticMessage());
           }
         }}
@@ -825,10 +1042,22 @@ export default function VideoPlayer({
       )}
 
       {hasError && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 px-8 text-center">
-          <p className="text-sm text-white/70">
-            This video couldn&apos;t load right now. Check your connection and try again.
-          </p>
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 px-8 text-center">
+          <div className="max-w-xs">
+            <p className="mb-4 text-sm text-white/75">
+              This video couldn&apos;t load right now. Check your connection and try again.
+            </p>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                retryPlayback();
+              }}
+              className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-accent/30 transition active:scale-95 hover:bg-accent-hover"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       )}
 
@@ -847,12 +1076,36 @@ export default function VideoPlayer({
         </div>
       )}
 
+      {isScrubbing && scrubPreviewTime !== null && (
+        <div className="pointer-events-none absolute bottom-28 left-1/2 z-[16] -translate-x-1/2 rounded-full bg-black/65 px-4 py-2 text-sm font-semibold tabular-nums text-white backdrop-blur-md">
+          {formatPlayerTime(scrubPreviewTime)}
+        </div>
+      )}
+
       {/* Press-and-hold 2x speed indicator */}
       {isHoldSpeeding && (
         <div className="pointer-events-none absolute top-1/2 left-1/2 z-[15] -translate-x-1/2 -translate-y-1/2">
           <div className="flex items-center gap-1.5 rounded-full bg-black/55 px-4 py-2 text-white backdrop-blur-md">
             <Zap size={16} fill="white" />
             <span className="text-sm font-semibold tabular-nums">{HOLD_SPEED_MULTIPLIER}x</span>
+          </div>
+        </div>
+      )}
+
+      {showVolumeHud && (
+        <div className="pointer-events-none absolute top-1/2 right-5 z-[16] -translate-y-1/2 rounded-full bg-black/55 px-3 py-4 text-white backdrop-blur-md">
+          <div className="flex h-32 w-8 flex-col items-center justify-end rounded-full bg-white/15 p-1">
+            <div
+              className="w-full rounded-full bg-accent transition-transform"
+              style={{
+                height: "100%",
+                transform: `scaleY(${volume})`,
+                transformOrigin: "bottom",
+              }}
+            />
+          </div>
+          <div className="mt-2 text-center text-xs font-semibold tabular-nums">
+            {Math.round(volume * 100)}
           </div>
         </div>
       )}
@@ -909,6 +1162,82 @@ export default function VideoPlayer({
           </button>
         </div>
 
+        {showSettings && (
+          <div
+            className="absolute right-3 z-40 w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border border-white/15 bg-black/80 p-3 text-white shadow-2xl shadow-black/60 backdrop-blur-xl md:right-6"
+            style={{
+              bottom: "calc(5.75rem + env(safe-area-inset-bottom, 0px))",
+            }}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onPointerUp={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+                Speed
+              </p>
+              <div className="grid grid-cols-5 gap-1">
+                {SPEED_OPTIONS.map((speed) => (
+                  <button
+                    key={speed}
+                    type="button"
+                    onClick={() => setPlaybackSpeed(speed)}
+                    className={cn(
+                      "rounded-md px-2 py-2 text-xs font-semibold transition",
+                      playbackRate === speed
+                        ? "bg-accent text-white"
+                        : "bg-white/10 text-white/75 hover:bg-white/15"
+                    )}
+                  >
+                    {speed}x
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+                Quality
+              </p>
+              <div className="grid max-h-44 grid-cols-2 gap-1 overflow-y-auto pr-1">
+                <button
+                  type="button"
+                  onClick={() => selectQuality(-1)}
+                  disabled={!hlsRef.current}
+                  className={cn(
+                    "rounded-md px-2 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
+                    selectedQuality === -1
+                      ? "bg-accent text-white"
+                      : "bg-white/10 text-white/75 hover:bg-white/15"
+                  )}
+                >
+                  Auto
+                </button>
+                {qualityOptions.map((quality) => (
+                  <button
+                    key={quality.index}
+                    type="button"
+                    onClick={() => selectQuality(quality.index)}
+                    className={cn(
+                      "rounded-md px-2 py-2 text-xs font-semibold transition",
+                      selectedQuality === quality.index
+                        ? "bg-accent text-white"
+                        : "bg-white/10 text-white/75 hover:bg-white/15"
+                    )}
+                  >
+                    {quality.label}
+                  </button>
+                ))}
+                {qualityOptions.length === 0 && (
+                  <span className="col-span-2 rounded-md bg-white/10 px-2 py-2 text-xs text-white/55">
+                    Quality levels unavailable for this source.
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Bottom Controls */}
         <div
           className="player-controls absolute bottom-0 left-0 right-0 z-30 px-3 pt-12 md:px-6 md:pt-16"
@@ -932,13 +1261,13 @@ export default function VideoPlayer({
             <div className="relative h-1.5 w-full rounded-full bg-white/20 transition-all group-hover/progress:h-2.5">
               {/* Buffered */}
               <div
-                className="absolute inset-y-0 left-0 rounded-full bg-white/30"
-                style={{ width: `${bufferedPercent}%` }}
+                className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-white/30 will-change-transform"
+                style={{ transform: `scaleX(${bufferedScale})` }}
               />
               {/* Progress */}
               <div
-                className="absolute inset-y-0 left-0 rounded-full bg-accent"
-                style={{ width: `${progressPercent}%` }}
+                className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-accent will-change-transform"
+                style={{ transform: `scaleX(${progressScale})` }}
               />
               {/* Scrubber handle: always visible on touch since there is no hover state */}
               <div
@@ -1020,12 +1349,7 @@ export default function VideoPlayer({
                     onClick={(event) => event.stopPropagation()}
                     onChange={(e) => {
                       const v = parseFloat(e.target.value);
-                      setVolume(v);
-                      if (videoRef.current) {
-                        videoRef.current.volume = v;
-                        videoRef.current.muted = v === 0;
-                        setIsMuted(v === 0);
-                      }
+                      setVideoVolume(v);
                     }}
                     className="hidden w-0 opacity-0 transition-all duration-200 group-hover/volume:w-20 group-hover/volume:opacity-100 sm:block"
                   />
@@ -1034,7 +1358,7 @@ export default function VideoPlayer({
 
               {/* Time */}
               <span className="min-w-0 truncate text-[11px] font-medium tabular-nums text-text-secondary md:text-xs">
-                {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
+                {formatPlayerTime(displayTime)} / {formatPlayerTime(duration)}
               </span>
             </div>
 
@@ -1045,20 +1369,27 @@ export default function VideoPlayer({
                   event.stopPropagation();
                   cycleSpeed();
                 }}
-                className="flex items-center justify-center rounded border border-white/20 px-2 text-xs font-semibold hover:border-white/40"
+                className="hidden items-center justify-center rounded border border-white/20 px-2 text-xs font-semibold hover:border-white/40 sm:flex"
                 style={{ minWidth: TAP_TARGET, minHeight: TAP_TARGET }}
                 aria-label="Playback speed"
               >
                 {playbackRate}x
               </button>
 
-              {/* Settings placeholder */}
               <button
                 type="button"
-                onClick={(event) => event.stopPropagation()}
-                className="hidden items-center justify-center opacity-60 transition-transform hover:scale-110 hover:opacity-100 sm:flex"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowSettings((value) => !value);
+                  showControlsTemporarily();
+                }}
+                className={cn(
+                  "flex items-center justify-center transition-transform hover:scale-110",
+                  showSettings ? "text-accent" : "opacity-70 hover:opacity-100"
+                )}
                 style={{ minWidth: TAP_TARGET, minHeight: TAP_TARGET }}
                 aria-label="Settings"
+                aria-expanded={showSettings}
               >
                 <Settings size={20} />
               </button>
